@@ -1,0 +1,32 @@
+# Julia package/project specific
+/.manifest
+/.project
+/.dev
+/.vscode
+
+# Julia compiled files
+
+# Julia backup files
+
+# General ignore patterns
+.DS_Store
+
+# IDE and editor specific files
+.vscode/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# dumpfile
+disc_*
+
+# Test
+Test_*
+
+# PNG
+*.png
+
+# Backup
+backup/
