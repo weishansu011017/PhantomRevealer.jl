@@ -1,6 +1,7 @@
-include("../src/PhantomRevealer.jl")
-include("../src/module_initialization.jl")
-using Main.PhantomRevealer
+using PhantomRevealer
+using LaTeXStrings
+using DataStructures
+using PyCall
 
 """
 Slice the disk for checking the edge-on vertical structure.
@@ -54,6 +55,10 @@ function Slicing_disk(file::String)
 
     # Setup info
     initial_logging(get_analysis_info(file))
+
+    # Initialize built-in plotting backend
+    push!(pyimport("sys")."path", dirname(pathof(PhantomRevealer)))
+    prplt = pyimport("pyplot_backend")
 
     # Packaging the parameters
     sparams :: Tuple{Float64,Float64,Int} = (smin, smax, sn)
@@ -138,7 +143,6 @@ function main()
         exit(1)
     end
 
-    directory = pwd()                                                    # The filepath of analyzed file should be written as the relative path of script.
     files = ARGS             
 
     First_logging()
