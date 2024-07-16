@@ -56,10 +56,6 @@ function Slicing_disk(file::String)
     # Setup info
     initial_logging(get_analysis_info(file))
 
-    # Initialize built-in plotting backend
-    push!(pyimport("sys")."path", dirname(pathof(PhantomRevealer)))
-    prplt = pyimport("pyplot_backend")
-
     # Packaging the parameters
     sparams :: Tuple{Float64,Float64,Int} = (smin, smax, sn)
     ϕparams :: Tuple{Float64,Float64,Int} = (ϕmin, ϕmax, ϕn)
@@ -104,6 +100,10 @@ function Slicing_disk(file::String)
     end
 
     if Save_figure
+        # Initialize built-in plotting backend
+        push!(pyimport("sys")."path", dirname(pathof(PhantomRevealer)))
+        prplt = pyimport("pyplot_backend")
+        
         transfer_cgs!(Result)
         timestamp = Result.time
         s = Result.axis[1]
