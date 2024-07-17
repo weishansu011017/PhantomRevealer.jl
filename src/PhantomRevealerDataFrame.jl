@@ -357,7 +357,7 @@ sinks_data = prdf_list[end]         # The last data which is read from `read_pha
 COM2star!(prdf_list, sinks_data, 1)
 ```
 """
-function COM2star!(data_list, sinks_data::PhantomRevealerDataFrame, sink_particle_id::Int; kwargs...)
+function COM2star!(data_list, sinks_data::PhantomRevealerDataFrame, sink_particle_id::Int)
     if (isa(data_list, Array))
         nothing
     elseif (isa(data_list, PhantomRevealerDataFrame))
@@ -658,8 +658,7 @@ function rotate_to_disk_L!(
     data_list::Array,
     rmin::Float64,
     rmax::Float64,
-    target_laxis::Union{Nothing,Vector{Float64}} = nothing; 
-    kwargs...
+    target_laxis::Union{Nothing,Vector{Float64}} = nothing
 )
     for data in data_list
         if (data.params["Origin_sink_id"] == -1)
@@ -765,8 +764,7 @@ function get_disk_mass(
     data::PhantomRevealerDataFrame,
     sink_data::PhantomRevealerDataFrame,
     disk_radius::Float64 = 120.0,
-    sink_particle_id::Int64 = 1;
-    kwargs...
+    sink_particle_id::Int64 = 1
 )
     data_cp = deepcopy(data)
     particle_mass = data_cp.params["mass"]

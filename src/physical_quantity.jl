@@ -508,7 +508,7 @@ function quantity_intepolate_2D(
 
 
     if h_intepolate == 0.0
-        for column_name in column_name
+        for column_name in column_names
             quantity_result[column_name] = NaN
         end
     else
