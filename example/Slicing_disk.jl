@@ -101,9 +101,8 @@ function Slicing_disk(file::String)
 
     if Save_figure
         # Initialize built-in plotting backend
-        push!(pyimport("sys")."path", dirname(pathof(PhantomRevealer)))
-        prplt = pyimport("pyplot_backend")
-        
+        prplt = initialize_pyplot_backend()
+
         transfer_cgs!(Result)
         timestamp = Result.time
         s = Result.axis[1]
