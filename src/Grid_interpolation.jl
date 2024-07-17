@@ -168,8 +168,8 @@ Calculate the scale height of disk.
 function Disk_scale_height_analysis(
     data::PhantomRevealerDataFrame,
     s_params::Tuple{Float64,Float64,Int},
-    ϕ_params::Tuple{Float64,Float64,Int} = (0.0, 2π, 16),
-    z_params::Tuple{Float64,Float64,Int} = (0.0, 35.0, 151),
+    ϕ_params::Tuple{Float64,Float64,Int} = (0.0, 2π, 8),
+    z_params::Tuple{Float64,Float64,Int} = (0.0, 35.0, 70),
     smoothed_kernal::Function = M5_spline,
     h_mode::String = "intep";
     kwargs...

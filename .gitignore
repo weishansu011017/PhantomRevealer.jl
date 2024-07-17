@@ -21,6 +21,7 @@
 
 # dumpfile
 disc_*
+*.h5
 
 # Test
 Test_*

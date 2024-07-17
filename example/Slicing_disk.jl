@@ -5,7 +5,8 @@ using PyCall
 
 """
 Slice the disk for checking the edge-on vertical structure.
-    Made by Wei-Shan Su, 2024
+    by Wei-Shan Su,
+    July 16, 2024
 """
 
 function Slicing_disk(file::String)
@@ -138,7 +139,7 @@ end
 function main()
     # Commendline variable setting
     if length(ARGS) < 1
-        println("Usage: julia Slicing_disk <filename>")
+        println("Usage: julia Slicing_disk.jl <filename>")
         exit(1)
     end
 
