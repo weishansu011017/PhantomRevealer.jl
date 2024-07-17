@@ -66,7 +66,8 @@ function Disk_3D_Grid_analysis(
     z_params::Tuple{Float64,Float64,Int},
     column_names::Vector{String},
     smoothed_kernal::Function = M5_spline,
-    h_mode::String = "intep",
+    h_mode::String = "intep";
+    kwargs...
 )
     function wrap_dens(data::PhantomRevealerDataFrame, point::Array)::Float64
         return density(data, point, smoothed_kernal, h_mode, "polar")
@@ -170,7 +171,8 @@ function Disk_scale_height_analysis(
     ϕ_params::Tuple{Float64,Float64,Int} = (0.0, 2π, 16),
     z_params::Tuple{Float64,Float64,Int} = (0.0, 35.0, 151),
     smoothed_kernal::Function = M5_spline,
-    h_mode::String = "intep",
+    h_mode::String = "intep";
+    kwargs...
 )
     edgeon_data_3D = Disk_3D_Grid_analysis(
         data,
@@ -269,7 +271,8 @@ function Disk_2D_FaceOn_Grid_analysis(
     midH_frac::Float64 = 0.5,
     midz_seperation::Int = 5,
     smoothed_kernal::Function = M5_spline,
-    h_mode::String = "intep",
+    h_mode::String = "intep";
+    kwargs...
 )
     function wrap_surf_dens(data::PhantomRevealerDataFrame, point::Array)::Float64
         return surface_density(data, point, smoothed_kernal, h_mode, "polar")
