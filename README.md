@@ -204,6 +204,14 @@ Write_HDF5(filepath, result, "TEST")    # The `filepath` is used for extracting 
 
 The `data_prefix` is the `PREFIX` part in the result string `PREFIX_00XXX.h5`
 
+The output dump files can be loaded by `Read_HDF5()`.
+
+~~~julia
+result = Read_HDF5(filepath)
+~~~
+
+
+
 #### Example : Disk interpolation
 
 Our goal is to interpolating a disk-shape (annulus) grid from a dumpfile `disc_00000` which including gaseous and dusty particles. We should also calculate the mid-plane average of density `rho` and velocity `vs, vϕ` . Here is a example to do it.
@@ -278,7 +286,88 @@ function Disk_Faceon_interpolation(filepath :: String)
 end
 ~~~
 
+### Built-in plotting backend
 
+There has a built-in plotting backend in **PhantomRevealer** which is based on `matplotlib`. To use it, initializing the backend by
+
+~~~julia
+prplt = initialize_pyplot_backend()
+~~~
+
+The basic structure of backend is shown as the following
+
+~~~python
+class figure_ax:
+    '''
+    The plotting object in the code.
+    
+    Field in Class:
+        fig: The figure/Canvas.
+        ax: The axes of plotting/colorbar
+        proj: The projection of plotting
+    '''
+    def __init__(self,proj=None):
+        '''
+        Two kinds of projection
+        "None": Normal cartisian plotting
+        "polar": Polar plotting
+        '''
+        self.fig: mfg.Figure = None
+        self.ax: maxe._axes.Axes = None
+        self.ncols = None
+        self.nrows = None
+        self.proj = proj
+~~~
+
+Follow the guideline to use the structure 
+
+1. Generate an object
+
+   ~~~julia
+   fax = prplt.figure_ax()
+   ~~~
+
+2. Setup the desired figure
+
+   ~~~julia
+   fax.setup_fig(2,2,(10,6))
+   ~~~
+
+3. Make the plot at each axes
+
+   ~~~julia
+   fax.ax[0].plot(x,y,*plotting_params)
+   cont = fax.ax[1].pcolor(x,y,z,*plotting_params)
+   ~~~
+
+   
+
+4. Setup the colorbar for each map (if necessary). Allowing giving the colorbar a specific label so that the new colorbar can be drawn on the old ax rather then the new one.
+
+   ~~~julia
+   colorbar = fax.setup_colorbar(cont,"LABEL_OF_COLORBAR")
+   ~~~
+
+5. Save the figure
+
+   ~~~julia
+   save_fig("figure_1.png",450)
+   ~~~
+
+6. Close the figure
+
+   ~~~julia
+   fax.close_fig()
+   ~~~
+
+   Or, two subclasses for plotting is also provided 
+
+   ~~~julia
+   prplt.cart_plots()
+   prplt.polar_plots()
+   ~~~
+
+   Check out the source code under `src/` to get further information.
 
 ## Relative links
 
