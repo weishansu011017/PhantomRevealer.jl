@@ -1,7 +1,5 @@
 using PhantomRevealer
-using LaTeXStrings
-using DataStructures
-using PyCall
+module_initialization()
 
 """
 Slice the disk for checking the edge-on vertical structure.

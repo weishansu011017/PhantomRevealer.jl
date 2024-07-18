@@ -18,11 +18,30 @@ include("$_module_location/read_phantom.jl")
 include("$_module_location/Grid_interpolation.jl")
 #Level 6 (Extract data)
 include("$_module_location/Extract_data.jl")
-# # include("$_module_location/result_toolkits.jl")
+include("$_module_location/result_toolkits.jl")
 
 # Import Python plt backend
 push!(pyimport("sys")."path", _module_location)
 prplt = pyimport("pyplot_backend")
+
+"""
+    initialize_pyplot_backend()
+Initialize the built-in pyplot backend.
+"""
+function initialize_pyplot_backend()
+    push!(pyimport("sys")."path", dirname(pathof(PhantomRevealer)))
+    prplt = pyimport("pyplot_backend")
+    return prplt
+end
+
+"""
+    module_initialization()
+Initialize All the module that used for PhantomRevealer.
+"""
+function module_initialization()
+    dir = dirname(pathof(PhantomRevealer))
+    include(dir * "/module_initialization.jl")
+end
 
 # Export function, marco, const...
 for name in filter(s -> !startswith(string(s), "#"), names(@__MODULE__, all = true))
