@@ -4,7 +4,6 @@
         July 18, 2024
 """
 module_initialization()
-include("./Extract_data.jl")
 
 """
     Faceon_polar_plot(Disk2Ddata :: Analysis_result, array_index :: Int64,colormap::String="plasma",Log_flag::Bool=true, vlim :: Vector = [], figzise :: Tuple = (12,8))
