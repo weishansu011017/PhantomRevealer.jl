@@ -365,7 +365,7 @@ Transfer all the quantities into cgs unit, and also add another dictionary about
 - `au :: Bool = ture`: The flag about transfering distance into AU or not.
 
 """
-function transfer_cgs!(data::Analysis_result, year::Bool = true; kwargs...)
+function transfer_cgs!(data::Analysis_result, year::Bool = true)
     function replace_grident_exp!(latex_str)
         str = latex_str.s
         regex = r"cm\$\^\{(-?\d+)\}"
