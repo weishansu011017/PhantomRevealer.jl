@@ -6,7 +6,7 @@
 module_initialization()
 
 """
-    Faceon_polar_plot(Disk2Ddata :: Analysis_result, array_index :: Int64,colormap::String="plasma",Log_flag::Bool=true, vlim :: Vector = [], figzise :: Tuple = (12,8))
+    Faceon_polar_plot(Disk2Ddata :: Analysis_result, array_index :: Int64,Log_flag::Bool=false,minzero::Bool=false, vlim :: Vector = [],colormap::String="plasma", figzise :: Tuple = (12,8))
 Draw the face-on polar plot from the Faceon data.
 
 #Parameters
@@ -40,9 +40,9 @@ function Faceon_polar_plot(Disk2Ddata :: Analysis_result, array_index :: Int64,L
     fax = prplt.polar_plot(s, ϕ, slabel, ϕlabel)
     fax.setup_fig(1,1,figzise)
     if !isempty(vlim)
-        fax.pcolor_draw([z], [colormap],[z_unit],[Log_flag],[label_left],[0],[vlim])
+        fax.pcolor_draw([z], [colormap],[z_unit],[Log_flag],[label_left],[minzero],[vlim])
     else
-        fax.pcolor_draw([z], [colormap],[z_unit],[Log_flag],[label_left],[0])
+        fax.pcolor_draw([z], [colormap],[z_unit],[Log_flag],[label_left],[minzero])
     end
     fax.ax.test(0.7,0.95,label_right,transform=ax.transAxes,c="white", fontsize=14, verticalalignment="top", bbox=fax.props)
     return fax
