@@ -33,7 +33,6 @@ end
 
 function initialize_modules()
     for mod in _MODULE_LIST
-        println(Symbol(mod))
         if mod in [:Sys, :Threads]
             Base.eval(Main, :(using Base.$(Symbol(mod))))
         else
