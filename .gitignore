@@ -32,5 +32,7 @@ Test_*
 # Backup
 backup/
 
+Fully_analysis_disk.jl
+
 # Subjog
 subjobJ.sh
