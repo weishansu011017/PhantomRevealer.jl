@@ -1,4 +1,4 @@
-using Revise
-include("./src/PhantomRevealer.jl")
-include("./src/module_initialization.jl")
-using Main.PhantomRevealer
+using Pkg
+Pkg.develop(path=".")
+using PhantomRevealer
+include("src/module_initialization.jl")

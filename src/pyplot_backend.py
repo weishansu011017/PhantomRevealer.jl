@@ -24,7 +24,7 @@ def openinteractive():
     if not plt.isinteractive():
         plt.ion()
             
-def Get_vminmax(array:np.ndarray,minzero:bool = False):
+def Get_vminmax(array:np.ndarray):
     '''
     Calculate the minimum and maximum value for colorbar.
     '''
@@ -32,7 +32,7 @@ def Get_vminmax(array:np.ndarray,minzero:bool = False):
     std = np.nanstd(array)
     vmax = median + 3*std
     vmin = median - 3*std
-    if minzero and vmin<0.0:
+    if (np.nanmin(array)>=0.0) and (vmin<0.0):
         vmin = 1e-15
         
     print(f"Warning: Automatically calculate (vmin, vmax) = {(vmin,vmax)}")
@@ -107,7 +107,7 @@ class figure_ax:
         if self.fig is None or self.ax is None:
             raise NameError(f"No figure or ax has found! You should initialized the figure by the 'setup_figure()' method.")
         
-    def setup_fig(self, nrows=1,ncols=1,figsize = (10, 6)):
+    def setup_fig(self, nrows=1,ncols=1,figsize = (12, 8)):
         openinteractive()
         if self.fig is None or self.ax is None:
             self.ncols = ncols
@@ -236,7 +236,7 @@ class two_axes_plot(figure_ax):
             indies[i] = (i+1)*self.ncols-1
         return indies
     
-    def pcolor_draw(self,images:list,colormaps:list, clabels:list, Log_flags:list, anatonate_labels:list, minzero_flags = None, vlims = None,draw=True):
+    def pcolor_draw(self,images:list,colormaps:list, clabels:list, Log_flags:list, anatonate_labels:list, vlims = None,draw=True):
         '''
         The clims parameters should be the following format:
         
@@ -256,10 +256,6 @@ class two_axes_plot(figure_ax):
             raise ValueError(f"Mismatching number of clabels! The number of rows of figures was set to be {self.nrows}, but {len(clabels)} elements in clabels was given.")
         if len(anatonate_labels) != self.ncols:
             raise ValueError(f"Mismatching number of anatonate_labels! The number of columns of figures was set to be {self.ncols}, but {len(anatonate_labels)} elements in anatonate_labels was given.")
-        if (not (minzero_flags is None)) and (len(minzero_flags) != self.nrows):
-            raise ValueError(f"Mismatching number of minzero_flags! The number of rows of figures was set to be {self.nrows}, but {len(minzero_flags)} elements in minzero_flags was given.")
-        if (minzero_flags is None):
-            minzero_flags = np.zeros(self.nrows)
         
         # Preparing Color limit
         colorbar_pos_indies = self.get_colorbar_pos_indies()
@@ -269,7 +265,7 @@ class two_axes_plot(figure_ax):
             for i in range(self.get_number_of_ax()):
                 if i in colorbar_pos_indies:
                     image = images[i]
-                    vlims[j] = Get_vminmax(image, minzero_flags[j])
+                    vlims[j] = Get_vminmax(image)
                     j += 1
         else:
             if len(vlims) != self.nrows:
@@ -403,3 +399,4 @@ class cart_plot(two_axes_plot):
     
     def set_xlabel(self,axid):
         self.ax[axid].set_xlabel(self.xlabel)
+        

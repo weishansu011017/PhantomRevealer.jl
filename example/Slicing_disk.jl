@@ -1,5 +1,5 @@
 using PhantomRevealer
-module_initialization()
+initialization_modules()
 
 """
 Slice the disk for checking the edge-on vertical structure.
@@ -121,13 +121,12 @@ function Slicing_disk(file::String)
         vzg = grid_reduction(grids_dictg["vz"],2).grid'
         vzd = grid_reduction(grids_dictd["vz"],2).grid'
 
-        fax.pcolor_draw([rhog,rhod], colormaps, clabels,[1,1],[latexstring(L"$t = ",Int64(round(timestamp)), L"$ yr")],[1,1], clims, false)
+        fax.pcolor_draw([rhog,rhod], colormaps, clabels,[1,1],[latexstring(L"$t = ",Int64(round(timestamp)), L"$ yr")], clims, false)
         fax.streamplot_draw([vsg,vsd],[vzg,vzd],streamline_color, streamline_density, false)
 
         fax.set_ylabel(0)
         fax.set_ylabel(1)
         fax.set_xlabel(1)
-
         fax.save_fig("$(File_header)_$(extract_number(file)).$(Figure_format)",dpi)
     end
 
