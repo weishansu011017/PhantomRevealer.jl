@@ -1,5 +1,5 @@
 using PhantomRevealer
-initialization_modules()
+initialize_modules()
 
 """
 Slice the disk for checking the edge-on vertical structure.
