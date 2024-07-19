@@ -8,6 +8,7 @@ Slice the disk for checking the edge-on vertical structure.
 """
 
 function Slicing_disk(file::String)
+    # ------------------------------PARAMETER SETTING------------------------------
     Analysis_tag :: String = "Slicing_disk"
     # General setting
     Smoothed_kernel_function :: Function = M6_spline                     # Allowed function: M4_spline, M5_spline, M6_spline, C2_Wendland, C4_Wendland, C6_Wendland
@@ -52,6 +53,7 @@ function Slicing_disk(file::String)
     
     column_names :: Vector{String} = ["vs", "vz"]                        # The column that would be interpolated
 
+    # -----------------------------------------------------------------------------
     # Setup info
     initial_logging(get_analysis_info(file))
 
