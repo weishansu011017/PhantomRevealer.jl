@@ -32,8 +32,14 @@ function initialize_pyplot_backend()
 end
 
 function initialize_modules()
-    dir = dirname(pathof(PhantomRevealer))
-    include(dir * "/module_initialization.jl")
+    for mod in _MODULE_LIST
+        println(Symbol(mod))
+        if mod in [:Sys, :Threads]
+            Base.eval(Main, :(using Base.$(Symbol(mod))))
+        else
+            Base.eval(Main, :(using $(Symbol(mod))))
+        end
+    end
 end
 
 # Import Python plt backend

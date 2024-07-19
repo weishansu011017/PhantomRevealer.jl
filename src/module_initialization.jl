@@ -1,24 +1,32 @@
 # Pkg Module
-using .Sys
-using .Threads
-using CSV
-using DataFrames
-using DataStructures
-using Dates
-using FilesystemDatastructures
-using ForwardDiff               # Automatic differentiation package
-using HDF5
-using Interpolations
-using LaTeXStrings
-using LinearAlgebra
-using Logging
-using LoggingExtras
-using NearestNeighbors
-using Pkg
-using Plots
-using Printf
-using PyCall
-using QuadGK
-using Statistics
-using StatsPlots
-using StatsBase
+const _MODULE_LIST = [
+    :CSV,
+    :DataFrames,
+    :DataStructures,
+    :Dates,
+    :FilesystemDatastructures,
+    :HDF5,
+    :Interpolations,
+    :LaTeXStrings,
+    :LinearAlgebra,
+    :Logging,
+    :LoggingExtras,
+    :NearestNeighbors,
+    :Pkg,
+    :Plots,
+    :Printf,
+    :PyCall,
+    :QuadGK,
+    :Statistics,
+    :StatsPlots,
+    :StatsBase,
+    :Sys,
+    :Threads,
+]
+for mod in _MODULE_LIST
+    if mod in [:Sys, :Threads]
+        @eval using Base.$(Symbol(mod))
+    else
+        @eval using $(Symbol(mod))
+    end
+end
