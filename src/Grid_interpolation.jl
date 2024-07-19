@@ -150,6 +150,39 @@ function Disk_3D_Grid_analysis(
 end
 
 """
+    Disk_scale_height_analysis(edgeon_data_3D :: Dict{String, gridbackend})
+Calculate the scale height of disk from existing edgeon data.
+
+# Parameters
+- `edgeon_data_3D :: Dict{String, gridbackend}`: The result from a edge-on analysis.
+
+# Returns
+- `Interpolations.Extrapolation`: The interpolation object of scale height as the function of `s`
+"""
+function Disk_scale_height_analysis(edgeon_data_3D :: Dict{String, gridbackend})
+    rho_grid = grid_reduction(edgeon_data_3D["rho"], 2)
+    s_separate = rho_grid.dimension[1]
+    z_separate = rho_grid.dimension[2]
+    s_array = rho_grid.axis[1]
+    z_array = collect(rho_grid.axis[2])
+    H_array = zeros(Float64, s_separate)
+    @threads for i = 1:s_separate
+        rho_array = rho_grid.grid[i, :]
+        rho_sum = cumsum(rho_array) ./ maximum(rho_array)
+        rho_cdf = rho_sum ./ maximum(rho_sum)
+        for j = 1:z_separate
+            cdfrho = rho_cdf[j]
+            if cdfrho > 0.99999999
+                H_array[i] = z_array[j]
+                break
+            end
+        end
+    end
+    result = CubicSplineInterpolation(s_array, H_array, extrapolation_bc = Line())
+    return result
+end
+
+"""
     Disk_scale_height_analysis(data::PhantomRevealerDataFrame, s_params::Tuple{Float64,Float64,Int}, ϕ_params :: Tuple{Float64,Float64,Int} = (0.0,2π,12) ,z_params::Tuple{Float64,Float64,Int} = (0.0, 35.0, 40),smoothed_kernal:: Function = M5_spline,h_mode::String="intep")
 Calculate the scale height of disk.
 
@@ -181,25 +214,7 @@ function Disk_scale_height_analysis(
         smoothed_kernal,
         h_mode,
     )
-    rho_grid = grid_reduction(edgeon_data_3D["rho"], 2)
-    s_separate = s_params[3]
-    z_separate = z_params[3]
-    s_array = rho_grid.axis[1]
-    z_array = collect(rho_grid.axis[2])
-    H_array = zeros(Float64, s_separate)
-    @threads for i = 1:s_separate
-        rho_array = rho_grid.grid[i, :]
-        rho_sum = cumsum(rho_array) ./ maximum(rho_array)
-        rho_cdf = rho_sum ./ maximum(rho_sum)
-        for j = 1:z_separate
-            cdfrho = rho_cdf[j]
-            if cdfrho > 0.99999999
-                H_array[i] = z_array[j]
-                break
-            end
-        end
-    end
-    result = CubicSplineInterpolation(s_array, H_array, extrapolation_bc = Line())
+    result = Disk_scale_height_analysis(edgeon_data_3D)
     return result
 end
 

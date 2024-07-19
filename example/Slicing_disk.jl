@@ -13,7 +13,6 @@ function Slicing_disk(file::String)
     # General setting
     Smoothed_kernel_function :: Function = M6_spline                     # Allowed function: M4_spline, M5_spline, M6_spline, C2_Wendland, C4_Wendland, C6_Wendland
     h_mode :: String = "closest"                                         # Allowed mode: "mean", "closest", "intep"
-    Rotate_xy_plane :: Bool = false                                      # Rotate the whole coordinate to the coordinate with z' axis paralleling to the direction of angular_momentum_vector of primary disc
     Extracting_dumpfile :: Bool = false                                  # Extract the analysis result.
     Save_figure :: Bool = true                                           # Saving the result as figure.
 
@@ -63,6 +62,7 @@ function Slicing_disk(file::String)
     zparams :: Tuple{Float64,Float64,Int} = (zmin, zmax, zn)
     colormaps = [colormap_gas, colormap_dust]
     clims = [clim_gas, clim_dust]
+    columns_order :: Vector = ["rho", "∇rhos", "∇rhoϕ", column_names...] # construct a ordered column names 
     
     # Read file
     prdf_list :: Vector{PhantomRevealerDataFrame} = read_phantom(file,"all")
@@ -93,7 +93,7 @@ function Slicing_disk(file::String)
     final_dict :: OrderedDict = create_grids_dict(["g","d"], [grids_dictg, grids_dictd])
 
     # Packaging the result
-    Result_buffer :: Analysis_result_buffer = Analysis_result_buffer(time, final_dict, ["rho","∇rhos","∇rhoϕ","vs", "vz"],params)
+    Result_buffer :: Analysis_result_buffer = Analysis_result_buffer(time, final_dict, columns_order,params)
     Result :: Analysis_result = buffer2output(Result_buffer)
 
     if Extracting_dumpfile

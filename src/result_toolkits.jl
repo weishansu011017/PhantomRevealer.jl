@@ -50,8 +50,8 @@ Draw the face-on polar plot from the Faceon data.
 - `PyCall.PyObject <pyplot_backend.polar_plot>`: The object of plotting.
 """
 function Faceon_polar_plot(Disk2Ddata :: Analysis_result, array_index :: Int64,Log_flag::Bool=false, vlim :: Union{Nothing,Vector} = nothing,colormap::String="plasma", figzise :: Tuple = (8,6);fax::Union{PyObject, Nothing} =nothing)
-    if Disk2Ddata.params["Analysis_type"] != "Faceon"
-        error("InputError: The Analysis type of data needs to be `Faceon`!")
+    if Disk2Ddata.params["Analysis_type"] != "Faceon_disk"
+        error("InputError: The Analysis type of data needs to be `Faceon_disk`!")
     end
     transfer_cgs!(Disk2Ddata)
     s = Disk2Ddata.axis[1]

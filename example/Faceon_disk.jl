@@ -8,10 +8,12 @@ Analysis the data in a face-on annulus grid.
 
 function Disk_Faceon_interpolation(filepath :: String)
     # ------------------------------PARAMETER SETTING------------------------------
+    Analysis_tag :: String = "Faceon_disk"
     # parameters of radial axis
     smin :: Float64 = 10.0
     smax :: Float64 = 120.0
     sn :: Int64 = 141
+    scale_height_sn :: Int64 = 75
   
     # parameters of azimuthal axis
     ϕmin :: Float64 = 0.0
@@ -32,6 +34,7 @@ function Disk_Faceon_interpolation(filepath :: String)
     # -----------------------------------------------------------------------------
     # Packaging parameters
     sparams :: Tuple{Float64,Float64,Int} = (smin, smax, sn)
+    scale_height_params :: Tuple{Float64,Float64,Int} = (smin, smax, scale_height_sn)
     ϕparams :: Tuple{Float64,Float64,Int} = (ϕmin, ϕmax, ϕn)
     columns_order :: Vector = ["Sigma", "∇Sigmas", "∇Sigmaϕ", column_names..., (mid_column_names.*"m")...] # construct a ordered column names (Those quantities with taking mid-plane average will have a suffix "m")
     
@@ -50,12 +53,12 @@ function Disk_Faceon_interpolation(filepath :: String)
     
     # Make the `params` field
     time :: Float64 = get_time(datag)
-    params :: Dict{String, Any} = Analysis_params_recording(datag, File_prefix)
+    params :: Dict{String, Any} = Analysis_params_recording(datag, Analysis_tag)
     params["GasDiskMass"] = get_disk_mass(datag, sinks_data, smax, center_sinks_id)
     params["DustDiskMass"] = get_disk_mass(datad, sinks_data, smax, center_sinks_id)
   
     # Calculate the scale height of gaseous disk
-    H_g = Disk_scale_height_analysis(datag, sparams) 
+    H_g = Disk_scale_height_analysis(datag, scale_height_params) 
     
     # Interpolation
     grids_gas :: Dict{String, gridbackend} = Disk_2D_FaceOn_Grid_analysis(datag, sparams, ϕparams, column_names, mid_column_names, H_g, midH_frac, z_separation, smoothed_kernel, h_mode)
