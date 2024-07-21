@@ -25,7 +25,7 @@ function Disk_Faceon_interpolation(filepath :: String)
     midH_frac :: Float64 = 0.5 												# The ratio between the mid-plane disk scale height and the gaseous disk scale height
     column_names :: Vector = ["e"]									    	# The quantities that would be interpolate except for surface density `Sigma`.
     mid_column_names :: Vector = ["rho","vs", "vϕ"]                         # The quantities that would be interpolate in the midplane.
-    center_sinks_id :: Int64 = 1											# The id of sink at the middle of disk for analysis.
+    Origin_sinks_id :: Int64 = 1											# The id of sink at the middle of disk for analysis.
     smoothed_kernel :: Function = M6_spline
     h_mode :: String = "closest"
     
@@ -40,7 +40,7 @@ function Disk_Faceon_interpolation(filepath :: String)
     
     # Load file
     prdf_list :: Vector{PhantomRevealerDataFrame} = read_phantom(filepath, "all")
-    COM2star!(prdf_list, prdf_list[end], center_sinks_id)
+    COM2star!(prdf_list, prdf_list[end], Origin_sinks_id)
     datag :: PhantomRevealerDataFrame = prdf_list[1]
     datad :: PhantomRevealerDataFrame = prdf_list[2]
     sinks_data :: PhantomRevealerDataFrame = prdf_list[3]
@@ -54,8 +54,8 @@ function Disk_Faceon_interpolation(filepath :: String)
     # Make the `params` field
     time :: Float64 = get_time(datag)
     params :: Dict{String, Any} = Analysis_params_recording(datag, Analysis_tag)
-    params["GasDiskMass"] = get_disk_mass(datag, sinks_data, smax, center_sinks_id)
-    params["DustDiskMass"] = get_disk_mass(datad, sinks_data, smax, center_sinks_id)
+    params["GasDiskMass"] = get_disk_mass(datag, sinks_data, smax, Origin_sinks_id)
+    params["DustDiskMass"] = get_disk_mass(datad, sinks_data, smax, Origin_sinks_id)
   
     # Calculate the scale height of gaseous disk
     H_g = Disk_scale_height_analysis(datag, scale_height_params) 

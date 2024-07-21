@@ -433,6 +433,11 @@ function transfer_cgs!(data::Analysis_result, year::Bool = true)
                 header = LaTeXString(L"$v_{\phi,")
                 suffix = LaTeXString(suffix* "}")
                 unit = LaTeXString(L"$ [cm s$^{-1}$]")
+            elseif occursin("vz", column_name)
+                data.data_dict[key] *= uv
+                header = LaTeXString(L"$v_{z,")
+                suffix = LaTeXString(suffix* "}")
+                unit = LaTeXString(L"$ [cm s$^{-1}$]")
             else
                 header = LaTeXString(column_name)
                 suffix = LaTeXString(L"")

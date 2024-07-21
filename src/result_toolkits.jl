@@ -4,7 +4,7 @@
         July 18, 2024
 """
 initialization_modules()
-
+using Statistics
 const TRANSFER_DICT = Dict{String, LaTeXString}(
     "∇" => L"$\nabla$",
     "ϕ" => L"$\phi$",
@@ -37,7 +37,7 @@ Draw the face-on polar plot from the Faceon data.
 
 #Parameters
 - `Disk2Ddata :: Analysis_result`: The analysis result from PhantomRevealer
-- `array_index :: Int64`: The column index of plotting array.
+- `array_index :: Int64`: The column index of array.
 - `Log_flag :: Bool = true`: Change the colorbar to log scale
 - `vlim :: Union{Nothing,Vector} = nothing`: The colorbar range
 - `colormap :: String = "plasma"`: The colormap.
@@ -75,6 +75,43 @@ function Faceon_polar_plot(Disk2Ddata :: Analysis_result, array_index :: Int64,L
     fax.ax.text(0.9,0.95,label_right,transform=fax.ax.transAxes,c="white", fontsize=14, verticalalignment="top", bbox=fax.props)
     fax.draw_fig()
     return fax
+end
+
+"""
+    Check_array_quantity(data :: Analysis_result, array_index :: Int64)
+Print out the statistical properties of array with given array index.
+
+# Parameters
+- `data :: Analysis_result`: The analysis result from PhantomRevealer.
+- `array_index :: Int64`: The column index of array.
+"""
+function Check_array_quantity(data :: Analysis_result, array_index :: Int64)
+    try
+        _ = data.params["_cgs"]
+    catch err
+        In_cgs = false
+    else
+        In_cgs = true
+    end
+    nanmax(itr) = maximum(x for x in itr if !isnan(x))
+    nanmin(itr) = minimum(x for x in itr if !isnan(x))
+    array = data.data_dict[array_index]
+    column_name = data.column_names[array_index]
+    shape = size(array)
+    max = nanmax(array)
+    min = nanmin(array)
+    average = mean(array)
+    med = median(array)
+    STD = std(array)
+    println("--------------Properties of array $column_name--------------")
+    println("Size: $shape")
+    println("In cgs unit?: $In_cgs")
+    println("Maximum: $max")
+    println("Minimum: $min")
+    println("Average: $average")
+    println("Median: $med")
+    println("STD: $STD")
+    println("----------------------------------------------------------------")
 end
 
 function TESTHI()

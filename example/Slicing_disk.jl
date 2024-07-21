@@ -11,27 +11,11 @@ function Slicing_disk(file::String)
     # ------------------------------PARAMETER SETTING------------------------------
     Analysis_tag :: String = "Slicing_disk"
     # General setting
-    Smoothed_kernel_function :: Function = M6_spline                     # Allowed function: M4_spline, M5_spline, M6_spline, C2_Wendland, C4_Wendland, C6_Wendland
+    smoothed_kernel :: Function = M6_spline                              # Allowed function: M4_spline, M5_spline, M6_spline, C2_Wendland, C4_Wendland, C6_Wendland
     h_mode :: String = "closest"                                         # Allowed mode: "mean", "closest", "intep"
-    Extracting_dumpfile :: Bool = false                                  # Extract the analysis result.
-    Save_figure :: Bool = true                                           # Saving the result as figure.
-
-    # Figure setting
-    figsize :: Tuple = (12,8)
-    dpi = 450
-    slabel = latexstring(L"$r$ [au]")
-    zlabel = latexstring(L"$z$ [au]")
-    colormap_gas :: String = "RdYlGn"
-    colormap_dust :: String = "RdYlGn"
-    clim_gas :: Vector = [1e-11,1e-7]
-    clim_dust :: Vector = [1e-13,5e-8]
-    streamline_density :: Float64 = 3.0
-    streamline_color :: String = "black"
 
     # Output setting
-
-    File_header :: String = "Slice"
-    Figure_format :: String = "png"
+    File_prefix :: String = "Slice"
 
     # Disk generating setting (Base on cylindrical coordinate (s,ϕ,z))
     Origin_sinks_id = 1                                                  # The id of sink which is located at the middle of disk.
@@ -60,8 +44,6 @@ function Slicing_disk(file::String)
     sparams :: Tuple{Float64,Float64,Int} = (smin, smax, sn)
     ϕparams :: Tuple{Float64,Float64,Int} = (ϕmin, ϕmax, ϕn)
     zparams :: Tuple{Float64,Float64,Int} = (zmin, zmax, zn)
-    colormaps = [colormap_gas, colormap_dust]
-    clims = [clim_gas, clim_dust]
     columns_order :: Vector = ["rho", "∇rhos", "∇rhoϕ", column_names...] # construct a ordered column names 
     
     # Read file
@@ -86,8 +68,8 @@ function Slicing_disk(file::String)
     add_cylindrical!(datad)
 
     # Main_analysis
-    grids_dictg :: Dict{String, gridbackend} = Disk_3D_Grid_analysis(datag, sparams, ϕparams, zparams, column_names, Smoothed_kernel_function, h_mode)
-    grids_dictd :: Dict{String, gridbackend} = Disk_3D_Grid_analysis(datad, sparams, ϕparams, zparams, column_names, Smoothed_kernel_function, h_mode)
+    grids_dictg :: Dict{String, gridbackend} = Disk_3D_Grid_analysis(datag, sparams, ϕparams, zparams, column_names, smoothed_kernel, h_mode)
+    grids_dictd :: Dict{String, gridbackend} = Disk_3D_Grid_analysis(datad, sparams, ϕparams, zparams, column_names, smoothed_kernel, h_mode)
 
     # Packaging the grids dictionary
     final_dict :: OrderedDict = create_grids_dict(["g","d"], [grids_dictg, grids_dictd])
@@ -96,42 +78,8 @@ function Slicing_disk(file::String)
     Result_buffer :: Analysis_result_buffer = Analysis_result_buffer(time, final_dict, columns_order,params)
     Result :: Analysis_result = buffer2output(Result_buffer)
 
-    if Extracting_dumpfile
-        Write_HDF5(file, Result, File_header)
-    end
-
-    if Save_figure
-        # Initialize built-in plotting backend
-        prplt = initialize_pyplot_backend()
-
-        transfer_cgs!(Result)
-        timestamp = Result.time
-        s = Result.axis[1]
-        z = Result.axis[3]
-        rhog_label = Result.params["column_units"][2]
-        rhod_label = Result.params["column_units"][3]
-        clabels :: Vector = [rhog_label, rhod_label]
-        fax = prplt.cart_plot(s,z, slabel, zlabel)
-        fax.setup_fig(2,1,figsize)
-
-        rhog = grid_reduction(grids_dictg["rho"],2).grid'
-        rhod = grid_reduction(grids_dictd["rho"],2).grid'
-
-        vsg = grid_reduction(grids_dictg["vs"],2).grid'
-        vsd = grid_reduction(grids_dictd["vs"],2).grid'
-
-        vzg = grid_reduction(grids_dictg["vz"],2).grid'
-        vzd = grid_reduction(grids_dictd["vz"],2).grid'
-
-        fax.pcolor_draw([rhog,rhod], colormaps, clabels,[1,1],[latexstring(L"$t = ",Int64(round(timestamp)), L"$ yr")], clims, false)
-        fax.streamplot_draw([vsg,vsd],[vzg,vzd],streamline_color, streamline_density, false)
-
-        fax.set_ylabel(0)
-        fax.set_ylabel(1)
-        fax.set_xlabel(1)
-        fax.save_fig("$(File_header)_$(extract_number(file)).$(Figure_format)",dpi)
-    end
-
+    # Write the file to HDF5
+    Write_HDF5(file, Result, File_prefix)
     @info "-------------------------------------------------------"
 end
 
