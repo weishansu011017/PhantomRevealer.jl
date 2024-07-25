@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.font_manager
 import matplotlib.figure as mfg
 import matplotlib.axes as maxe
 import matplotlib.pyplot as plt
@@ -6,16 +7,27 @@ import matplotlib.cm as cm
 import matplotlib.colors as mcolors
 import matplotlib.gridspec as gspec
 
-#Include LaTeX rendering
-plt.rcParams.update({
-    "font.family": "Times New Roman",
-    "font.size": 13,
-    "text.usetex": True,
-    "text.latex.preamble": r"\usepackage{amsfonts}"
-})
-
 # Set nan if divided by zero
 np.seterr(divide='ignore')
+
+def rcParams_update(font_family='Times New Roman', font_size=13, text_usetex=True, text_latex_preamble=r"\usepackage{amsfonts}"):
+    plt.rcParams.update({
+    "font.family": font_family,
+    "font.size": font_size,
+    "text.usetex": text_usetex,
+    "text.latex.preamble": text_latex_preamble
+})
+    
+def Current_rcParams():
+    return plt.rcParams
+    
+# Update LaTeX Rendering
+for file in matplotlib.font_manager.findSystemFonts(fontpaths=None, fontext='ttf'):
+    if 'Time' in file:
+        rcParams_update()
+        break
+    else:
+        rcParams_update('sans-serif')
 
 def openinteractive():
     '''
