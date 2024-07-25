@@ -1,3 +1,4 @@
+import subprocess
 import numpy as np
 import matplotlib.font_manager
 import matplotlib.figure as mfg
@@ -10,7 +11,17 @@ import matplotlib.gridspec as gspec
 # Set nan if divided by zero
 np.seterr(divide='ignore')
 
+def check_latex_installed():
+    try:
+        subprocess.run(['latex', '--version'], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        return True
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return False
+
 def rcParams_update(font_family='Times New Roman', font_size=13, text_usetex=True, text_latex_preamble=r"\usepackage{amsfonts}"):
+    '''
+    Update the font setting
+    '''
     plt.rcParams.update({
     "font.family": font_family,
     "font.size": font_size,
@@ -22,12 +33,15 @@ def Current_rcParams():
     return plt.rcParams
     
 # Update LaTeX Rendering
-for file in matplotlib.font_manager.findSystemFonts(fontpaths=None, fontext='ttf'):
-    if 'Time' in file:
-        rcParams_update()
-        break
-    else:
-        rcParams_update('sans-serif')
+if check_latex_installed():
+    for file in matplotlib.font_manager.findSystemFonts(fontpaths=None, fontext='ttf'):
+        if 'Time' in file:
+            rcParams_update()
+            break
+        else:
+            rcParams_update('sans-serif')
+else:
+    rcParams_update('sans-serif', 13, False,'')
 
 def openinteractive():
     '''
