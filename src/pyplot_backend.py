@@ -311,7 +311,11 @@ class two_axes_plot(figure_ax):
         X = self._X
         Y = self._Y
         ax = self.ax
-        
+        # Make sure the axis has its minimun while plotting
+        x = self._x
+        y = self._y
+        xlim = [x[0],x[-1]]
+        ylim = [y[0],y[-1]]
         # Checking the grid size is mathing, and then drawing.
         j = 0
         for i,image in enumerate(images):
@@ -327,11 +331,15 @@ class two_axes_plot(figure_ax):
                         colorbar = self.setup_colorbar(cont,colorbar_ax_label=cax_label[j])
                         colorbar.set_label(clabels[j])
                         j += 1
+                    ax[i].set_xlim(xlim[0],xlim[1])
+                    ax[i].set_ylim(ylim[0],ylim[1])
                 else:
                     cont = ax.pcolor(X,Y,image, cmap=colormaps[0], norm=Norms[0])
                     ax.text(*cls.anato_text_position,anatonate_labels[0] ,transform=ax.transAxes,c='white', fontsize=14, verticalalignment='top', bbox=cls.props)
                     colorbar = self.setup_colorbar(cont,colorbar_ax_label=cax_label[0])
                     colorbar.set_label(clabels[0])
+                    ax.set_xlim(xlim[0],xlim[1])
+                    ax.set_ylim(ylim[0],ylim[1])
                     
         if draw:
             self.draw_fig()
