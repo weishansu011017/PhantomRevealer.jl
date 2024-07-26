@@ -1,6 +1,5 @@
 import numpy as np
 import h5py
-import warnings
 
 class PhantomRevealerAnalysisResult:
     '''
@@ -10,10 +9,10 @@ class PhantomRevealerAnalysisResult:
         For data:
             analysis_type: Verify the type of analysis
             time: The time flag of file
-            radius: The radius (Pitch_analysis -> np.ndarray, Spiral_analysis -> float)
             data_dict: The dictionary that stores all of the quantity (Dict(column_index(int) -> np.ndarray))
-            theta: The theta array of analysis.
+            axes: The axes of result array.
             column_names: The column name for each quantuty (Dict(column_index(int) -> str))
+            params: Other parameters of simulation
             
         For Other flag:
             _cgs: Verify whether the data is in cgs.
@@ -44,8 +43,9 @@ class PhantomRevealerAnalysisResult:
         with h5py.File(filepath, 'r') as f:
             time = f['time'][()]
             data_dict = read_dict(f,'data_dict',int)
-            axes = 0
-            column_names = read_dict(f, "column_names", int)
+            axes = read_dict(f, 'axes', int)
+            column_names = read_dict(f, 'column_names', int)
+            params = read_dict(f, 'params', str)
             
-            data = phantom_analysis(analysis_type , time, data_dict, theta, radius, column_names)
+            data = PhantomRevealerAnalysisResult(time, data_dict, axes, column_names, params)
             return data
