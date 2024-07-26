@@ -133,19 +133,19 @@ We would like to look at the quantities at an arbitrary point in a grid; therefo
 ~~~julia
 struct gridbackend
     grid::Array
-    axis::Vector{LinRange}
+    axes::Vector{LinRange}
     dimension::Vector{Int64}
 end
 ~~~
 
-where `grid` field can store the value of quantities on each point, and the coordinate of each element is defined by the axes in `axis` field. The `dimension` field provies the size of this array.
+where `grid` field can store the value of quantities on each point, and the coordinate of each element is defined by the axes in `axes` field. The `dimension` field provies the size of this array.
 
 To generate this grid automatically, entering
 
 ~~~julia
-imin :: Vector{Float64} = [10.0, 0.0]     # The minimum value of each axis
-imax :: Vector{Float64} = [120.0, 2π]			# The maximum value of each axis
-in :: Vector{Float64} = [181, 301]				# The number of separation of each axis
+imin :: Vector{Float64} = [10.0, 0.0]     # The minimum value of each axes
+imax :: Vector{Float64} = [120.0, 2π]			# The maximum value of each axes
+in :: Vector{Float64} = [181, 301]				# The number of separation of each axes
 type :: Type = Float64
 
 test_grid :: gridbackend = generate_empty_grid(imin, imax, in ,type)
@@ -175,7 +175,7 @@ The interpolation result needs to be extracted. A structure is designed to savin
 struct Analysis_result_buffer <: PhantomRevealerDataStructures
     time::Float64
     data_dict::Dict{Int,gridbackend}
-    axis::Vector{LinRange}
+    axes::Vector{LinRange}
     column_names::Dict{Int,String}
     params::Dict{String,Any}
 end
@@ -183,7 +183,7 @@ end
 mutable struct Analysis_result <: PhantomRevealerDataStructures
     time::Float64
     data_dict::Dict{Int,Array{Float64}}
-    axis::Dict{Int,Vector{Float64}}
+    axes::Dict{Int,Vector{Float64}}
     column_names::Dict{Int,String}
     params::Dict{String,Any}
 end

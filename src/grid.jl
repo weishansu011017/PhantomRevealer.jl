@@ -10,12 +10,12 @@ The struct for storeing data and axes.
 
 # Fields
 - `grid :: Array`: A ndarray for storeing data.
-- `axis :: Vector{LinRange}`: The axes array for each dimension of grid.
+- `axes :: Vector{LinRange}`: The axes array for each dimension of grid.
 - `dimension :: Vector{Int}`: The dimension of the grid (how much do the axes been separated.) e.g 3x3x4 matrix => [3,3,4]
 """
 struct gridbackend
     grid::Array
-    axis::Vector{LinRange}
+    axes::Vector{LinRange}
     dimension::Vector{Int64}
 end
 
@@ -65,8 +65,8 @@ meshgrids = meshgrid(x,y)
 ```
 """
 function meshgrid(gbe::gridbackend)
-    iaxis = gbe.axis
-    meshgrids = meshgrid(iaxis...)
+    iaxes = gbe.axes
+    meshgrids = meshgrid(iaxes...)
     return meshgrids
 end
 
@@ -114,20 +114,20 @@ function generate_empty_grid(
     else
         error("GridGeneratingError: Illegal input value.")
     end
-    iaxis = Array{LinRange}(undef, length(dimension))
+    iaxes = Array{LinRange}(undef, length(dimension))
     for (i, num) in enumerate(dimension)
-        iaxis[i] = LinRange(imin[i], imax[i], num)
+        iaxes[i] = LinRange(imin[i], imax[i], num)
     end
     grid::Array = zeros(type, dimension...)
-    return gridbackend(grid, iaxis, dimension)
+    return gridbackend(grid, iaxes, dimension)
 end
 
 """
-    generate_empty_grid(iaxis::Vector{LinRange}, type::Type = Float64)
+    generate_empty_grid(iaxes::Vector{LinRange}, type::Type = Float64)
 Generate an 'gridbackend'
 
 # Parameters
-- `iaxis::Vector{LinRange}`: The `LinRange` array with each axes
+- `iaxes::Vector{LinRange}`: The `LinRange` array with each axes
 - `type::Type = Float64`: Type of the data e.g. Float64
 
 # Returns
@@ -135,19 +135,19 @@ Generate an 'gridbackend'
 
 # Examples
 ```julia
-# Initialize iaxis
-iaxis = Vector{LinRange}(undef,2)
+# Initialize iaxes
+iaxes = Vector{LinRange}(undef,2)
 # Add axes
-iaxis[1] = LinRange(0.0,100.0,251)
-iaxis[2] = LinRange(0.0,2π,301)
+iaxes[1] = LinRange(0.0,100.0,251)
+iaxes[2] = LinRange(0.0,2π,301)
 
-grid :: gridbackend = generate_empty_grid(iaxis)
+grid :: gridbackend = generate_empty_grid(iaxes)
 ```
 """
-function generate_empty_grid(iaxis::Vector{LinRange}, type::Type = Float64)
-    dimension::Vector{Int64} = length.(iaxis)
+function generate_empty_grid(iaxes::Vector{LinRange}, type::Type = Float64)
+    dimension::Vector{Int64} = length.(iaxes)
     grid::Array = zeros(type, dimension...)
-    return gridbackend(grid, iaxis, dimension)
+    return gridbackend(grid, iaxes, dimension)
 end
 
 """
@@ -178,7 +178,7 @@ function coordinate(gbe::gridbackend, element::Tuple)
 
     result::Vector = zeros(Float64, length(gbe.dimension))
     for i in eachindex(result)
-        result[i] = gbe.axis[i][element[i]]
+        result[i] = gbe.axes[i][element[i]]
     end
     return result
 end
@@ -215,11 +215,11 @@ end
 
 """
     grid_reduction(gbe :: gridbackend, averaged_axis_id:: Int64 = 1)
-Reducing the grid in the `gridbackend` by taking the average along a specific axis.
+Reducing the grid in the `gridbackend` by taking the average along a specific axes.
 
 # Parameters
 - `gbe :: gridbackend`: The 'gridbackend' that contain all of the axes information
-- `averaged_axis_id :: Int64 = 1`: The axis that would be chosen for taking average along it.
+- `averaged_axis_id :: Int64 = 1`: The axes that would be chosen for taking average along it.
 
 # Returns
 - `gridbackend`: The `gridbackend` that reduce from the original data.
@@ -227,10 +227,10 @@ Reducing the grid in the `gridbackend` by taking the average along a specific ax
 function grid_reduction(gbe::gridbackend, averaged_axis_id::Int64 = 1)
     new_data::Array =
         dropdims(mean(gbe.grid, dims = averaged_axis_id), dims = averaged_axis_id)
-    newaxis = deepcopy(gbe.axis)
-    deleteat!(newaxis, averaged_axis_id)
-    type = typeof(newaxis[1][1])
-    newgrid::gridbackend = generate_empty_grid(newaxis, type)
+    newaxes = deepcopy(gbe.axes)
+    deleteat!(newaxes, averaged_axis_id)
+    type = typeof(newaxes[1][1])
+    newgrid::gridbackend = generate_empty_grid(newaxes, type)
     if !(size(newgrid.grid) == size(new_data))
         error("ReductionError: Failed to reduce the gridbackend.")
     else

@@ -121,8 +121,8 @@ function Slicing_disk(file::String)
 
         # Setup plotting target
         timestamp = Result.time
-        s = Result.axis[1]
-        z = Result.axis[3]
+        s = Result.axes[1]
+        z = Result.axes[3]
         rhog_label = Result.params["column_units"][rhog_index]
         rhod_label = Result.params["column_units"][rhod_index]
         clabels :: Vector = [rhog_label, rhod_label]

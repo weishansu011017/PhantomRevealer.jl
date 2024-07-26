@@ -51,8 +51,8 @@ function Constructing_figure(filepath::String)
 
     # Setup plotting target
     timestamp = data.time
-    s = data.axis[1]
-    z = data.axis[3]
+    s = data.axes[1]
+    z = data.axes[3]
     rhog_label = data.params["column_units"][rhog_index]
     rhod_label = data.params["column_units"][rhod_index]
     clabels :: Vector = [rhog_label, rhod_label]

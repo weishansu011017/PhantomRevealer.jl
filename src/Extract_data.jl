@@ -11,14 +11,14 @@ The structure that contains all of the analysis result but not prepare for extra
 # Fields
 - `time :: Float64`: The timestamp of simulation.
 - `data_dict :: Dict{Int, gridbackend}`: The dictionary that contains all of the data.
-- `axis :: Vector{LinRange}`: The axis of grid.
+- `axes :: Vector{LinRange}`: The axes of grid.
 - `column_names :: Dict{Int,String}`: The column name of each data.
 - `params :: Dict{String, Any}`: Other information of analysis/simulation.
 """
 struct Analysis_result_buffer <: PhantomRevealerDataStructures
     time::Float64
     data_dict::Dict{Int,gridbackend}
-    axis::Vector{LinRange}
+    axes::Vector{LinRange}
     column_names::Dict{Int,String}
     params::Dict{String,Any}
 end
@@ -30,14 +30,14 @@ The mutable structure that contains all of the analysis result for extraction.
 # Fields
 - `time :: Float64`: The timestamp of simulation.
 - `data_dict :: Dict{Int, Array{Float64}}`: The dictionary that contains all of the data.
-- `axis :: Dict{Int, Vector{Float64}}`: The axis of grid.
+- `axes :: Dict{Int, Vector{Float64}}`: The axes of grid.
 - `column_names :: Dict{Int,String}`: The column name of each data.
 - `params :: Dict{String, Any}`: Other information of analysis/simulation.
 """
 mutable struct Analysis_result <: PhantomRevealerDataStructures
     time::Float64
     data_dict::Dict{Int,Array{Float64}}
-    axis::Dict{Int,Vector{Float64}}
+    axes::Dict{Int,Vector{Float64}}
     column_names::Dict{Int,String}
     params::Dict{String,Any}
 end
@@ -220,7 +220,7 @@ function Analysis_result_buffer(
     column_names = create_column_names(keys_array, suffixes)
     column_dict = create_column_dict(column_names)
     sample_data = grids_dict[suffixes[1]][collect(keys(grids_dict[suffixes[1]]))[1]]
-    axis = sample_data.axis
+    axes = sample_data.axes
 
     prepare_dict = deepcopy(grids_dict)
     for suffix in suffixes
@@ -240,34 +240,34 @@ function Analysis_result_buffer(
             end
         end
     end
-    return Analysis_result_buffer(time, data_dict, axis, column_dict, params)
+    return Analysis_result_buffer(time, data_dict, axes, column_dict, params)
 end
 
 """
-    axis_self_check(input :: Analysis_result_buffer)
-Checking whether the axes in the `data_dict` is equal to the `axis` field.
+    axes_self_check(input :: Analysis_result_buffer)
+Checking whether the axes in the `data_dict` is equal to the `axes` field.
 
 # Parameters
 - `input :: Analysis_result_buffer`: The analysis buffer that would be used for checking.
 """
-function axis_self_check(input::Analysis_result_buffer)
+function axes_self_check(input::Analysis_result_buffer)
     input_data = input.data_dict
-    iaxis = input.axis
+    iaxes = input.axes
     for key in keys(input.column_names)
         column = input.column_names[key]
         if occursin("phi", column)
             continue
         end
         if typeof(input_data[key]) <: gridbackend
-            axis = input_data[key].axis
-            for i in eachindex(iaxis)
-                if !(iaxis[i] == axis[i])
-                    error("AxisError: Mismatching of axis in $column")
+            axes = input_data[key].axes
+            for i in eachindex(iaxes)
+                if !(iaxes[i] == axes[i])
+                    error("AxesError: Mismatching of axes in $column")
                 end
             end
         end
     end
-    @info "Axis self-checking success! "
+    @info "Axes self-checking success! "
 end
 
 """
@@ -281,7 +281,7 @@ Transfer the `Analysis_result_buffer` into `Analysis_result` for extracting the 
 - `Analysis_result`
 """
 function buffer2output(buffer_struct::Analysis_result_buffer)
-    axis_self_check(buffer_struct)
+    axes_self_check(buffer_struct)
     fields = fieldnames(Analysis_result_buffer)
     converted_values = [convert_field(getfield(buffer_struct, f)) for f in fields]
     return Analysis_result(converted_values...)
@@ -347,10 +347,10 @@ function Read_HDF5(filepath::String)
     h5open(filepath, "r") do f
         time = read(f, "time")
         data_dict = read_dict(f, "data_dict", Int, Array)
-        axis = read_dict(f, "axis", Int, Vector)
+        axes = read_dict(f, "axes", Int, Vector)
         column_names = read_dict(f, "column_names", Int, String)
         params = read_dict(f, "params", String, Any)
-        data = Analysis_result(time, data_dict, axis, column_names, params)
+        data = Analysis_result(time, data_dict, axes, column_names, params)
     end
     return data
 end

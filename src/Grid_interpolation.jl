@@ -163,8 +163,8 @@ function Disk_scale_height_analysis(edgeon_data_3D :: Dict{String, gridbackend})
     rho_grid = grid_reduction(edgeon_data_3D["rho"], 2)
     s_separate = rho_grid.dimension[1]
     z_separate = rho_grid.dimension[2]
-    s_array = rho_grid.axis[1]
-    z_array = collect(rho_grid.axis[2])
+    s_array = rho_grid.axes[1]
+    z_array = collect(rho_grid.axes[2])
     H_array = zeros(Float64, s_separate)
     @threads for i = 1:s_separate
         rho_array = rho_grid.grid[i, :]

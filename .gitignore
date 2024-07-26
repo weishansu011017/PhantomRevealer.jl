@@ -34,5 +34,6 @@ backup/
 
 Fully_analysis_disk.jl
 
-# Subjog
+# Subjob
 subjobJ.sh
+subjobJ64.sh

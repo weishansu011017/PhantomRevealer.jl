@@ -12,7 +12,7 @@ function Disk_Faceon_interpolation(filepath :: String)
     # parameters of radial axis
     smin :: Float64 = 10.0
     smax :: Float64 = 120.0
-    sn :: Int64 = 141
+    sn :: Int64 = 221
     scale_height_sn :: Int64 = 75
   
     # parameters of azimuthal axis
