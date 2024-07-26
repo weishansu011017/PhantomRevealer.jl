@@ -88,7 +88,7 @@ function main()
     First_logging()
 
     for file in files
-        println("File: $file")
+        @info "File: $file"
         @time_and_print begin
             Disk_Faceon_interpolation(file)
         end 

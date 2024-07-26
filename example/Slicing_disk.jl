@@ -16,6 +16,8 @@ function Slicing_disk(file::String)
 
     # Output setting
     File_prefix :: String = "Slice"
+    HDF5 :: Bool = false                                                 # Extract the final result as HDF5 format
+    figure :: Bool = true                                                # Extract the final result as figure
 
     # Disk generating setting (Base on cylindrical coordinate (s,ϕ,z))
     Origin_sinks_id = 1                                                  # The id of sink which is located at the middle of disk.
@@ -36,6 +38,18 @@ function Slicing_disk(file::String)
     
     column_names :: Vector{String} = ["vs", "vz"]                        # The column that would be interpolated
 
+    # Figure setting (Valid only if figure == ture)
+    Figure_format :: String = "png"
+    figsize :: Tuple = (12,8)
+    dpi = 450
+    slabel = latexstring(L"$r$ [au]")
+    zlabel = latexstring(L"$z$ [au]")
+    colormap_gas :: String = "RdYlGn"
+    colormap_dust :: String = "RdYlGn"
+    clim_gas :: Vector = [1e-17,4e-14]
+    clim_dust :: Vector = [1e-19,1e-15]
+    streamline_density :: Float64 = 3.0
+    streamline_color :: String = "black"
     # -----------------------------------------------------------------------------
     # Setup info
     initial_logging(get_analysis_info(file))
@@ -79,7 +93,61 @@ function Slicing_disk(file::String)
     Result :: Analysis_result = buffer2output(Result_buffer)
 
     # Write the file to HDF5
-    Write_HDF5(file, Result, File_prefix)
+    if HDF5
+        Write_HDF5(file, Result, File_prefix)
+    end
+
+    # Construct the figure
+    if figure
+        # Packaging parameters
+        colormaps = [colormap_gas,colormap_dust]
+        clims = [clim_gas, clim_dust]
+        number_data = extract_number(file)
+
+        transfer_cgs!(Result)
+
+        # Finding column_index
+        target_columns :: Vector{String} = ["rho_g","rho_d","vs_g","vs_d","vz_g","vz_d"]
+        target_column_index :: Vector{Int64} = zeros(Int64, length(target_columns))
+        for key in keys(Result.column_names)
+            value = Result.column_names[key]
+            for (i,target) in enumerate(target_columns)
+                if occursin(target, value)
+                    target_column_index[i] = key
+                end
+            end
+        end
+        rhog_index, rhod_index, vsg_index, vsd_index, vzg_index, vzd_index = target_column_index
+
+        # Setup plotting target
+        timestamp = Result.time
+        s = Result.axis[1]
+        z = Result.axis[3]
+        rhog_label = Result.params["column_units"][rhog_index]
+        rhod_label = Result.params["column_units"][rhod_index]
+        clabels :: Vector = [rhog_label, rhod_label]
+
+        reduced_array = Vector{Array{Float64}}(undef, length(target_columns))
+        for (i,index) in enumerate(target_column_index)
+            reduced_array[i] = dropdims(mean(Result.data_dict[index], dims = 2), dims = 2)'
+        end
+
+        rhog, rhod, vsg, vsd, vzg, vzd = reduced_array
+
+        # Preparing plotting backend
+        prplt = initialize_pyplot_backend()
+        fax = prplt.cart_plot(s, z, slabel, zlabel)
+        fax.setup_fig(2,1,figsize)
+
+        fax.pcolor_draw([rhog,rhod], colormaps, clabels,[1,1],[latexstring(L"$t = ",Int64(round(timestamp)), L"$ yr")], clims, false)
+        fax.streamplot_draw([vsg,vsd],[vzg,vzd],streamline_color, streamline_density, false)
+        fax.set_ylabel(0)
+        fax.set_ylabel(1)
+        fax.set_xlabel(1)
+        fax.save_fig("$(File_prefix)_$(number_data).$(Figure_format)",dpi)
+        fax.close_fig()
+    end
+    
     @info "-------------------------------------------------------"
 end
 
@@ -95,7 +163,7 @@ function main()
     First_logging()
 
     for file in files
-        println("File: $file")
+        @info "File: $file"
         @time_and_print begin
             Slicing_disk(file)
         end 
