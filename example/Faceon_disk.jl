@@ -56,7 +56,7 @@ function Disk_Faceon_interpolation(filepath :: String)
     params :: Dict{String, Any} = Analysis_params_recording(datag, Analysis_tag)
     params["GasDiskMass"] = get_disk_mass(datag, sinks_data, smax, Origin_sinks_id)
     params["DustDiskMass"] = get_disk_mass(datad, sinks_data, smax, Origin_sinks_id)
-    params["Hmid/H_g"] = midH_frac
+    params["HmidOverH_g"] = midH_frac
   
     # Calculate the scale height of gaseous disk
     H_g = Disk_scale_height_analysis(datag, scale_height_params) 
