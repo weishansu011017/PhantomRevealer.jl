@@ -64,6 +64,11 @@ function Faceon_polar_plot(Disk2Ddata :: Analysis_result, array_index :: Int64,L
     label_left = latexstring(L"$t = ",Int64(round(time)), L"$")
     label_right = replace_trans_LaTeXStr(Disk2Ddata.column_names[array_index])
 
+    if ϕ[end] != 2π
+        ϕ = vcat(ϕ, 2π)
+        z = hcat(z, z[:, 1])
+    end
+
     prplt = initialize_pyplot_backend()
     if isnothing(fax)
         fax = prplt.polar_plot(s, ϕ, slabel, ϕlabel)
