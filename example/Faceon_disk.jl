@@ -22,7 +22,7 @@ function Disk_Faceon_interpolation(filepath :: String)
   
     # Other parameters
     z_separation :: Int64 = 5												# The number of point selecting of vertical direction for taking average.
-    midH_frac :: Float64 = 0.5 												# The ratio between the mid-plane disk scale height and the gaseous disk scale height
+    midH_frac :: Float64 = 0.3 												# The ratio between the mid-plane disk scale height and the gaseous disk scale height
     column_names :: Vector = ["e"]									    	# The quantities that would be interpolate except for surface density `Sigma`.
     mid_column_names :: Vector = ["rho","vs", "vϕ"]                         # The quantities that would be interpolate in the midplane.
     Origin_sinks_id :: Int64 = 1											# The id of sink at the middle of disk for analysis.
@@ -56,10 +56,12 @@ function Disk_Faceon_interpolation(filepath :: String)
     params :: Dict{String, Any} = Analysis_params_recording(datag, Analysis_tag)
     params["GasDiskMass"] = get_disk_mass(datag, sinks_data, smax, Origin_sinks_id)
     params["DustDiskMass"] = get_disk_mass(datad, sinks_data, smax, Origin_sinks_id)
+    params["Hmid/H_g"] = midH_frac
   
     # Calculate the scale height of gaseous disk
     H_g = Disk_scale_height_analysis(datag, scale_height_params) 
-    
+    params["Hg(r)"] = H_g(LinRange(sparams...))
+
     # Interpolation
     grids_gas :: Dict{String, gridbackend} = Disk_2D_FaceOn_Grid_analysis(datag, sparams, ϕparams, column_names, mid_column_names, H_g, midH_frac, z_separation, smoothed_kernel, h_mode)
     grids_dust :: Dict{String, gridbackend} = Disk_2D_FaceOn_Grid_analysis(datad, sparams, ϕparams, column_names, mid_column_names, H_g, midH_frac, z_separation, smoothed_kernel, h_mode)
