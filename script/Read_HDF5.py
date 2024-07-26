@@ -26,7 +26,8 @@ class PhantomRevealerAnalysisResult:
         self.axes = axes
         self.column_names = column_names
         self.params = params
-        
+    
+    @staticmethod
     def read_HDF5(filepath): 
         def read_dict(f, name, K=str):
             dictionary = {}
