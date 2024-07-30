@@ -381,7 +381,7 @@ function Read_HDF5(filepath::String, close_warn::Bool=false)
 end
 
 """
-    transfer_cgs!(data :: Analysis_result, year::Bool=true,au::Bool=true)
+    transfer_cgs!(data :: Analysis_result, year::Bool=true)
 Transfer all the quantities into cgs unit, and also add another dictionary about the unit.
 
 # Parameters
@@ -416,6 +416,16 @@ function transfer_cgs!(data::Analysis_result, year::Bool = true)
             return result
         end
     end
+    function extract_label(s::String)::String
+        pattern = r"\[\d+\s+(.*?)\]"
+        match_result = match(pattern, s)
+        if match_result !== nothing
+            return match_result.captures[1]
+        else
+            return ""
+        end
+    end
+    
     umass = data.params["umass"]
     udist = data.params["udist"]
     utime = data.params["utime"]
@@ -464,7 +474,7 @@ function transfer_cgs!(data::Analysis_result, year::Bool = true)
                 suffix = LaTeXString(suffix* "}")
                 unit = LaTeXString(L"$ [cm s$^{-1}$]")
             else
-                header = LaTeXString(column_name)
+                header = LaTeXString(extract_label(column_name))
                 suffix = LaTeXString(L"")
                 unit = LaTeXString(L"")
             end
@@ -491,10 +501,10 @@ Add a extra label for a given column.
 
 """
 function add_more_label!(data::Analysis_result, column_index::Int, label::LaTeXString)
-    try
-        current_column_unit :: dict = self.params["column_units"]
-    catch e
+    if !haskey(data.params, "column_units")
         error("LookupError: You should calling the transfer_cgs!() function before calling this function!")
+    else
+        current_column_unit :: Dict = data.params["column_units"]
     end
     if haskey(current_column_unit, column_index)
         while true
@@ -512,4 +522,33 @@ function add_more_label!(data::Analysis_result, column_index::Int, label::LaTeXS
         end
     end
     data.params["column_units"][column_index] = label
+end
+
+"""
+    add_dust2gas_ratio!(data::Analysis_result, column_index::Int64 = 61)
+Add the column of dust-to-gas ratio
+
+# Parameters
+- `data :: Analysis_result`: The data.
+- `column_index :: Int64 = 61`: The index of column.
+"""
+function add_dust2gas_ratio!(data::Analysis_result, column_index::Int64 = 61)
+    transfer_cgs!(data)
+    rhog :: Union{Nothing, Array{Float64}} = nothing
+    rhod :: Union{Nothing, Array{Float64}} = nothing
+    for key in keys(data.column_names)
+        column_name = data.column_names[key]
+        if occursin("rhom_g", column_name) || occursin("rho_g", column_name)
+            rhog = data.data_dict[key]
+        elseif occursin("rhom_d", column_name) || occursin("rho_d", column_name)
+            rhod = data.data_dict[key]
+        end
+    end
+    if isnothing(rhog) || isnothing(rhod)
+        error("LookupError: The density column has not found!")
+    end
+    d2g = rhod./rhog
+    data.column_names[column_index] = "[$column_index  dust-to-gas]"
+    add_more_label!(data,column_index, L"\varepsilon")
+    data.data_dict[column_index] = d2g
 end

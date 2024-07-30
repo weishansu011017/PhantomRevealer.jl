@@ -4,7 +4,6 @@
         July 18, 2024
 """
 initialization_modules()
-using Statistics
 const TRANSFER_DICT = Dict{String, LaTeXString}(
     "∇" => L"$\nabla$",
     "ϕ" => L"$\phi$",
@@ -48,6 +47,14 @@ Draw the face-on polar plot from the Faceon data.
 
 # Returns
 - `PyCall.PyObject <pyplot_backend.polar_plot>`: The object of plotting.
+
+# Example
+```julia
+data = Read_HDF5("PRdumpfile.h5")
+fax = Faceon_polar_plot(data, 2) 
+# In order to plot it on the same canvas, use the keyword argument
+fax = Faceon_polar_plot(fax=fax, data, 3)
+````
 """
 function Faceon_polar_plot(Disk2Ddata :: Analysis_result, array_index :: Int64,Log_flag::Bool=false, vlim :: Union{Nothing,Vector} = nothing,colormap::String="plasma", figzise :: Tuple = (8,6);fax::Union{PyObject, Nothing} =nothing)
     if Disk2Ddata.params["Analysis_type"] != "Faceon_disk"
@@ -76,7 +83,7 @@ function Faceon_polar_plot(Disk2Ddata :: Analysis_result, array_index :: Int64,L
     else
         fax.reset_fig()
     end
-    fax.pcolor_draw([z], [colormap],[z_unit],[Log_flag],[label_left],vlim,false)
+    fax.pcolor_draw([z], [colormap],[z_unit],[Log_flag],[label_left],[vlim],false)
     fax.ax.text(0.9,0.95,label_right,transform=fax.ax.transAxes,c="white", fontsize=14, verticalalignment="top", bbox=fax.props)
     fax.draw_fig()
     return fax
@@ -91,12 +98,10 @@ Print out the statistical properties of array with given array index.
 - `array_index :: Int64`: The column index of array.
 """
 function Check_array_quantities(data :: Analysis_result, array_index :: Int64)
-    try
-        _ = data.params["_cgs"]
-    catch err
-        In_cgs = false
+    if haskey(data.params, "_cgs")
+        In_cgs = data.params["_cgs"]
     else
-        In_cgs = true
+        In_cgs = false
     end
     nanmax(itr) = maximum(x for x in itr if !isnan(x))
     nanmin(itr) = minimum(x for x in itr if !isnan(x))

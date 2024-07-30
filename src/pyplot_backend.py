@@ -11,6 +11,11 @@ import matplotlib.gridspec as gspec
 # Set nan if divided by zero
 np.seterr(divide='ignore')
 
+def replace_inf_with_nan(arr):
+    mask = np.isinf(arr)
+    arr[mask] = np.nan
+    return arr
+
 def check_latex_installed():
     try:
         subprocess.run(['latex', '--version'], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -54,12 +59,16 @@ def Get_vminmax(array:np.ndarray):
     '''
     Calculate the minimum and maximum value for colorbar.
     '''
+    array = replace_inf_with_nan(array)
     median = np.nanmedian(array)
     std = np.nanstd(array)
     vmax = median + 3*std
     vmin = median - 3*std
     if (np.nanmin(array)>=0.0) and (vmin<0.0):
-        vmin = 1e-15
+        if vmax<1e-15:
+            vmin = 5e-18
+        else:
+            vmin = 1e-15
         
     print(f"Warning: Automatically calculate (vmin, vmax) = {(vmin,vmax)}")
     return np.array([vmin,vmax])
@@ -124,7 +133,7 @@ class figure_ax:
         "polar": Polar plotting
         '''
         self.fig: mfg.Figure = None
-        self.ax: maxe._axes.Axes = None
+        self.ax = None
         self.ncols = None
         self.nrows = None
         self.proj = proj
@@ -184,7 +193,7 @@ class figure_ax:
                 
     def get_number_of_ax(self):
         ax = self.ax
-        if type(ax) != list:
+        if not isinstance(ax, list):
             return 1
         else:
             return len(self.ax)
@@ -324,7 +333,7 @@ class two_axes_plot(figure_ax):
             if image.shape != self.grid_shape():
                 raise ValueError(f"Mismatching shape of array! The grid size of figures was set to be ({self.grid_shape()}), but {image.shape} was given.")
             else:
-                if type(ax) == list:
+                if isinstance(ax, list):
                     cont = ax[i].pcolor(X,Y,image, cmap=colormaps[j], norm=Norms[j])
                     ax[i].text(*cls.anato_text_position,anatonate_labels[k] ,transform=ax[i].transAxes,c='white', fontsize=14, verticalalignment='top', bbox=cls.props)
                     if i in colorbar_pos_indies:
@@ -363,7 +372,7 @@ class two_axes_plot(figure_ax):
             elif vzgrid.shape != self.grid_shape():
                 raise ValueError(f"Mismatching shape of array! The grid size of figures was set to be ({self.grid_shape()}), but {vzgrid.shape} was given.")
             else:
-                if type(ax) == list:
+                if isinstance(ax, list):
                     ax[i].streamplot(X,Y,vxgrid,vzgrid,color=color, density=density)
                 else:
                     ax.streamplot(X,Y,vxgrid,vzgrid,color=color, density=density)
@@ -398,6 +407,17 @@ class polar_plot(two_axes_plot):
     @property
     def PHI(self):
         return self._X
+    
+    def pcolor_draw(self, images: list, colormaps: list, clabels: list, Log_flags: list, anatonate_labels: list, vlims=None, draw=True):
+        super().pcolor_draw(images, colormaps, clabels, Log_flags, anatonate_labels, vlims, draw)
+        ax = self.ax
+        if isinstance(ax, list):
+            for i in range(self.get_number_of_ax()):
+                ax[i].set_rmin(-1)
+        else:
+            ax.set_rmin(-1)
+                
+        
             
 class cart_plot(two_axes_plot):
     anato_text_position=(0.0065,0.98)
