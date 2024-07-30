@@ -19,6 +19,8 @@
 *.userosscache
 *.sln.docstates
 
+__pycache__/
+
 # dumpfile
 disc_*
 *.h5

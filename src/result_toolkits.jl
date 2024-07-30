@@ -54,9 +54,9 @@ function Faceon_polar_plot(Disk2Ddata :: Analysis_result, array_index :: Int64,L
         error("InputError: The Analysis type of data needs to be `Faceon_disk`!")
     end
     transfer_cgs!(Disk2Ddata)
-    s = Disk2Ddata.axis[1]
+    s = Disk2Ddata.axes[1]
     slabel = latexstring(L"$r$ [au]")
-    ϕ = Disk2Ddata.axis[2]
+    ϕ = Disk2Ddata.axes[2]
     ϕlabel = latexstring(L"$\phi$")
     z = Disk2Ddata.data_dict[array_index]
     z_unit = Disk2Ddata.params["column_units"][array_index]
@@ -90,7 +90,7 @@ Print out the statistical properties of array with given array index.
 - `data :: Analysis_result`: The analysis result from PhantomRevealer.
 - `array_index :: Int64`: The column index of array.
 """
-function Check_array_quantity(data :: Analysis_result, array_index :: Int64)
+function Check_array_quantities(data :: Analysis_result, array_index :: Int64)
     try
         _ = data.params["_cgs"]
     catch err
@@ -117,6 +117,16 @@ function Check_array_quantity(data :: Analysis_result, array_index :: Int64)
     println("Median: $med")
     println("STD: $STD")
     println("----------------------------------------------------------------")
+end
+
+function spiral_detection(Disk2Ddata :: Analysis_result)
+    function inverse_logarithmic_spiral(r, k_0, ϕmax, rmax)
+        spiral = mod((log(r/rmax)/k_0)+ϕmax, 2π)
+    end
+    function k2pitch(k)
+        beta = atan(abs(k))*(180/π)
+    end
+    error("This method have not done yet!")
 end
 
 function TESTHI()

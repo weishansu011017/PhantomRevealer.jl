@@ -113,7 +113,7 @@ Log the initial message including the version of the project.
 """
 function First_logging()
     version = get_project_version()
-    @info "Start Logging...\nPhantomRevealer analysis Module\n  Version: $version\n    Make by Wei-Shan Su, 2024\n"
+    @info "Start Logging...\nPhantomRevealer analysis Module\n  Version: $version\n    Made by Wei-Shan Su, 2024\n"
 end
 
 """
