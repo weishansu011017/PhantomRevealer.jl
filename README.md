@@ -162,9 +162,9 @@ the `grid` is equivalent to `test_grid`
 ### SPH interpolation
 
 In SPH, an arbitrary quantity $\mathbf{A}(\mathbf{r})$ can be interpolated by the following formula.
-$$
+```math
 \mathbf{A}(\mathbf{r}) \approx \sum_b \frac{\mathbf{A}_b}{\rho_b} W(|\mathbf{r}-\mathbf{r}_b|; h)
-$$
+```
 Where $W$ is the kernel function, and the $h$ is the smoothed radius. **PhantomRevealer** provides 6 kernel functions: $M_4$ B-Spline, $M_5$ B-Spline, $M_6$ B-Spline, Wendland $C_2$, Wendland $C_4$ and Wendland $C_6$. The smoothed radius $h$​ for each point can be determine by three ways: taking the average of all of the particles `"mean"`, choosing the smoothed radius of closest particles to the target`"closest"`, calculating by interpolating the nearest particles `"intep"` .
 
 ### File extraction
