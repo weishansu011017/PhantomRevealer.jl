@@ -1,4 +1,4 @@
-# PhantomRevealer
+# PhantomRevealer.jl
 
 A Julia interface for analyzing dump files from the Phantom Smoothed Particle Hydrodynamics code.
 
@@ -26,7 +26,7 @@ using Pkg
 
 Next, install this package directly from the Git repository:
 ```julia
-Pkg.add(url="https://github.com/weishansu011017/PhantomRevealer.git")
+Pkg.add(url="https://github.com/weishansu011017/PhantomRevealer.jl.git")
 ```
 
 ## Usage
