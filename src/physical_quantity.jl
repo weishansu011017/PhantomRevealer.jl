@@ -245,10 +245,11 @@ function quantity_intepolate(
     "cart" = cartitian
     "polar" = cylindrical
     """
+    working_column_names = deepcopy(column_names)
     if !(hasproperty(data.dfdata, "rho"))
         add_rho!(data)
     end
-    for column_name in column_names
+    for column_name in working_column_names
         if !(hasproperty(data.dfdata, column_name))
             error("IntepolateError: No matching column '$(column_name)'.")
         end
@@ -257,6 +258,12 @@ function quantity_intepolate(
         reference_point = _cylin2cart(reference_point)
     end
     divided_column = "rho"
+    if divided_column in working_column_names
+        rho_flag = true
+        deleteat!(working_column_names, findall(x->x==divided_column, working_column_names))
+    else
+        rho_flag = false
+    end
     quantity_result = Dict{String,Float64}()
     truncate_multiplier = KernelFunctionValid()[nameof(smoothed_kernal)]
     rnorm = get_rnorm_ref(data, reference_point)
@@ -265,7 +272,7 @@ function quantity_intepolate(
     dfdata = data.dfdata
 
     if h_intepolate == 0.0
-        for column_name in column_names
+        for column_name in working_column_names
             quantity_result[column_name] = NaN
         end
     else
@@ -273,18 +280,12 @@ function quantity_intepolate(
         indices = findall(x -> x <= truncate_radius, rnorm)
         filtered_dfdata = dfdata[indices, :]
         filtered_rnorm = filter(r -> r <= truncate_radius, rnorm)
-        for column_name in column_names
+        if rho_flag
+            quantity_result[divided_column] = sum(particle_mass .* (Smoothed_kernel_function.(smoothed_kernal, h_intepolate, filtered_rnorm,3)))
+        end
+        for column_name in working_column_names
             filtered_dfdata[!, column_name] ./= filtered_dfdata[!, divided_column]
-            quantity_result[column_name] = sum(
-                particle_mass .* (filtered_dfdata[!, column_name]) .* (
-                    Smoothed_kernel_function.(
-                        smoothed_kernal,
-                        h_intepolate,
-                        filtered_rnorm,
-                        3,
-                    )
-                ),
-            )
+            quantity_result[column_name] = sum(particle_mass .* (filtered_dfdata[!, column_name]) .* (Smoothed_kernel_function.(smoothed_kernal, h_intepolate, filtered_rnorm,3)))
         end
     end
     return quantity_result
@@ -459,6 +460,7 @@ function quantity_intepolate_2D(
     "cart" = cartitian
     "polar" = polar
     """
+    working_column_names = deepcopy(column_names)
     if !(hasproperty(data.dfdata, "Sigma"))
         add_Sigma!(data)
     end
@@ -479,6 +481,13 @@ function quantity_intepolate_2D(
         error("IntepolateError: The dimension of data is not supported to this function!")
     end
 
+    if divided_column in working_column_names
+        rho_flag = true
+        deleteat!(working_column_names, findall(x->x==divided_column, working_column_names))
+    else
+        rho_flag = false
+    end
+
     quantity_result = Dict{String,Float64}()
     truncate_multiplier = KernelFunctionValid()[nameof(smoothed_kernal)]
     snorm = get_snorm_ref(data, reference_point)
@@ -488,7 +497,7 @@ function quantity_intepolate_2D(
 
 
     if h_intepolate == 0.0
-        for column_name in column_names
+        for column_name in working_column_names
             quantity_result[column_name] = NaN
         end
     else
@@ -496,18 +505,12 @@ function quantity_intepolate_2D(
         indices = findall(x -> x <= truncate_radius, snorm)
         filtered_dfdata = dfdata[indices, :]
         filtered_snorm = filter(r -> r <= truncate_radius, snorm)
-        for column_name in column_names
+        if rho_flag
+            quantity_result[divided_column] = sum(particle_mass .* (Smoothed_kernel_function.(smoothed_kernal, h_intepolate, filtered_snorm,2)))
+        end
+        for column_name in working_column_names
             filtered_dfdata[!, column_name] ./= filtered_dfdata[!, divided_column]
-            quantity_result[column_name] = sum(
-                particle_mass .* (filtered_dfdata[!, column_name]) .* (
-                    Smoothed_kernel_function.(
-                        smoothed_kernal,
-                        h_intepolate,
-                        filtered_snorm,
-                        2,
-                    )
-                ),
-            )
+            quantity_result[column_name] = sum(particle_mass .* (filtered_dfdata[!, column_name]) .* (Smoothed_kernel_function.(smoothed_kernal,h_intepolate,filtered_snorm,2)))
         end
     end
     return quantity_result

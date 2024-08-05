@@ -391,8 +391,7 @@ function Disk_2D_FaceOn_Grid_analysis(
         ∇dens = wrap_grad_surf_dens(kdtf_data2d, target)
         Result_dict["∇Sigmas"].grid[i] = ∇dens[1]
         Result_dict["∇Sigmaϕ"].grid[i] = ∇dens[2]
-        quantity_interpolation_dict::Dict{String,Float64} =
-            wrap_quant2D(kdtf_data2d, target)
+        quantity_interpolation_dict::Dict{String,Float64} = wrap_quant2D(kdtf_data2d, target)
         if all(key -> haskey(Result_dict, key), keys(quantity_interpolation_dict))
             for key in keys(quantity_interpolation_dict)
                 Result_dict[key].grid[i] = quantity_interpolation_dict[key]
@@ -407,14 +406,12 @@ function Disk_2D_FaceOn_Grid_analysis(
         buffer_array = Vector{Dict}(undef, midz_seperation)
         for k in eachindex(z_array)
             target3D = [target..., z_array[k]]
-            kdtf_data3d =
-                KDtree_filter(data, kdtree3d, target3D, roughly_truncated_radius, "polar") # New data that has been filtered.
+            kdtf_data3d = KDtree_filter(data, kdtree3d, target3D, roughly_truncated_radius, "polar") # New data that has been filtered.
             buffer_array[k] = wrap_quant(kdtf_data3d, target3D)
         end
         mid_interpolation_dict = buffer_average_taker(buffer_array)
         for j in eachindex(mid_column_names)
-            Result_dict[imid_column_names[j]].grid[i] =
-                mid_interpolation_dict[mid_column_names[j]]
+            Result_dict[imid_column_names[j]].grid[i] = mid_interpolation_dict[mid_column_names[j]]
         end
     end
     @info "End 2D disk grid analysis."
