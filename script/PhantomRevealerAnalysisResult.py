@@ -143,9 +143,9 @@ class PhantomRevealerAnalysisResult:
             dictionary = {}
             g = f[name]
             for key,val in g.items():
-                if type(val[()]) == np.bytes_:
+                if isinstance(val[()], np.bytes_):
                     dictionary[K(key)] = val[()].decode('utf-8')
-                elif type(val[()]) == np.ndarray:
+                elif isinstance(val[()], np.ndarray):
                     dictionary[K(key)] = val[()].copy().T      # Trasepose because of the storage system
                 else:
                     dictionary[K(key)] = val[()]

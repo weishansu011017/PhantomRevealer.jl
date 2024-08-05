@@ -260,6 +260,21 @@ function grid_reduction(gbe_dict::Dict, averaged_axis_id::Int64 = 1)
 end
 
 """
+    grid_reduction(gbe_dict :: Dict, averaged_axis_id:: Int64 = 1)
+Reducing array by taking average along a axis with given id
+
+# Parameters
+- `array :: Array`: The array with n-dimension.
+- `averaged_axis_id :: Int64 = 1`: The axis that would be chosen for taking average along it.
+
+# Returns
+- `Array`: The array which has been reduce to (n-1)-dimension.
+"""
+function grid_reduction(array::Array, averaged_axis_id::Int64 = 1)
+    return dropdims(mean(array, dims = averaged_axis_id), dims = averaged_axis_id)
+end
+
+"""
     disk_2d_grid_generator(imin::Vector ,imax::Vector, in::Vector)
 Generate a face-on disk grid base on the polar/cylindrical coordinate (r,ϕ).
 

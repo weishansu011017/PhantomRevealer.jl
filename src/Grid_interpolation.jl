@@ -14,7 +14,7 @@ Step 3. Calculate the result for each point by using the SPH intepolation. The c
 """
 
 """
-    Disk_3D_Grid_analysis(data::PhantomRevealerDataFrame ,s_params::Tuple{Float64,Float64,Int} ,ϕ_params :: Tuple{Float64,Float64,Int} ,z_params::Tuple{Float64,Float64,Int},column_names::Vector{String}, smoothed_kernal:: Function = M5_spline,h_mode::String="intep")
+    Disk_3D_Grid_analysis(data::PhantomRevealerDataFrame ,s_params::Tuple{Float64,Float64,Int} ,ϕ_params :: Tuple{Float64,Float64,Int} ,z_params::Tuple{Float64,Float64,Int},column_names::Vector{String}, smoothed_kernal:: Function = M5_spline,h_mode::String="closest")
 Calculate the SPH interpolation on a Edge-on grid that is described as a cylindrical coordinate (s,ϕ,z) for a disk.
 
 Note: The grident values of arbitary quantities haven't supported yet!
@@ -22,7 +22,6 @@ Note: The grident values of arbitary quantities haven't supported yet!
 The density `rho` and its grident vector `∇rho` would be calculated automatically. The `∇ρ` would be in cylindrical coordinate (∇ρs, ∇ρϕ, ∇ρz)
 
 h_mode: 
-"intep": Intepolate h by local
 "closest": Choose h of the closest particles.
 "mean": use the mean value of h in the data.
 
@@ -33,7 +32,7 @@ h_mode:
 - `z_params :: Tuple{Float64,Float64,Int}`: The height parameters with [zmin, zmax, zn]
 - `column_names :: Vector{String}`: The quantities that would be interpolated.
 - `smoothed_kernal :: Function = M5_spline`: The Kernel function for interpolation.
-- `h_mode :: String="intep"`: The mode for finding a proper smoothed radius. (Allowed value: "intep", "closest", "mean")
+- `h_mode :: String="closest"`: The mode for finding a proper smoothed radius. (Allowed value: "closest", "mean")
 
 # Returns
 - `Dict{String, gridbackend}`: The dictionary that contains all of the result by the form `gridbackend`.
@@ -66,7 +65,7 @@ function Disk_3D_Grid_analysis(
     z_params::Tuple{Float64,Float64,Int},
     column_names::Vector{String},
     smoothed_kernal::Function = M5_spline,
-    h_mode::String = "intep"
+    h_mode::String = "closest"
 )
     function wrap_dens(data::PhantomRevealerDataFrame, point::Array)::Float64
         return density(data, point, smoothed_kernal, h_mode, "polar")
@@ -183,7 +182,7 @@ function Disk_scale_height_analysis(edgeon_data_3D :: Dict{String, gridbackend})
 end
 
 """
-    Disk_scale_height_analysis(data::PhantomRevealerDataFrame, s_params::Tuple{Float64,Float64,Int}, ϕ_params :: Tuple{Float64,Float64,Int} = (0.0,2π,8) ,z_params::Tuple{Float64,Float64,Int} = (0.0, 28.0, 70),smoothed_kernal:: Function = M5_spline,h_mode::String="intep")
+    Disk_scale_height_analysis(data::PhantomRevealerDataFrame, s_params::Tuple{Float64,Float64,Int}, ϕ_params :: Tuple{Float64,Float64,Int} = (0.0,2π,8) ,z_params::Tuple{Float64,Float64,Int} = (0.0, 28.0, 70),smoothed_kernal:: Function = M5_spline,h_mode::String="closest")
 Calculate the scale height of disk.
 
 # Parameters
@@ -192,7 +191,7 @@ Calculate the scale height of disk.
 - `ϕ_params :: Tuple{Float64,Float64,Int}`: The azimuthal parameters with [ϕmin, ϕmax, ϕn]
 - `z_params :: Tuple{Float64,Float64,Int}`: The height parameters with [zmin, zmax, zn]
 - `smoothed_kernal :: Function = M5_spline`: The Kernel function for interpolation.
-- `h_mode :: String="intep"`: The mode for finding a proper smoothed radius. (Allowed value: "intep", "closest", "mean")
+- `h_mode :: String="closest"`: The mode for finding a proper smoothed radius. (Allowed value: "closest", "mean")
 
 # Returns
 - `Interpolations.Extrapolation`: The interpolation object of scale height as the function of `s`
@@ -203,7 +202,7 @@ function Disk_scale_height_analysis(
     ϕ_params::Tuple{Float64,Float64,Int} = (0.0, 2π, 8),
     z_params::Tuple{Float64,Float64,Int} = (0.0, 28.0, 70),
     smoothed_kernal::Function = M5_spline,
-    h_mode::String = "intep"
+    h_mode::String = "closest"
 )
     edgeon_data_3D = Disk_3D_Grid_analysis(
         data,
@@ -222,7 +221,7 @@ end
     Disk_2D_FaceOn_Grid_analysis(data::PhantomRevealerDataFrame ,s_params::Tuple{Float64,Float64,Int} ,ϕ_params :: Tuple{Float64,Float64,Int}, 
     column_names::Vector{String}, mid_column_names::Vector{String}, 
     H_func::Interpolations.Extrapolation, midH_frac::Float64=0.5, midz_seperation::Int = 5,
-    smoothed_kernal:: Function = M5_spline,h_mode::String="intep")
+    smoothed_kernal:: Function = M5_spline,h_mode::String="closest")
 Calculate the SPH interpolation on a Face-on grid that is described as a polar coordinate (s,ϕ) for a disk.
 
 Note: The grident values of arbitary quantities haven't supported yet!
@@ -232,7 +231,6 @@ The surface density `Sigma` and its grident vector `∇Sigma` would be calculate
 For those quantities that calculate by taking average in mid-plane would have a suffix `m`. e.g rhom, vsm,...
 
 h_mode: 
-"intep": Intepolate h by local
 "closest": Choose h of the closest particles.
 "mean": use the mean value of h in the data.
 
@@ -246,7 +244,7 @@ h_mode:
 - `midH_frac :: Float64=0.5`: Fraction between The disk scale height and mid plane scale height i.e. Hmid/Hg
 - `midz_seperation :: Int = 5`: The number of grid along the z axis for taking the average of midplane
 - `smoothed_kernal :: Function = M5_spline`: The Kernel function for interpolation.
-- `h_mode :: String="intep"`: The mode for finding a proper smoothed radius. (Allowed value: "intep", "closest", "mean")
+- `h_mode :: String="closest"`: The mode for finding a proper smoothed radius. (Allowed value: "closest", "mean")
 
 # Returns
 - `Dict{String, gridbackend}`: The dictionary that contains all of the result by the form `gridbackend`.
@@ -284,7 +282,7 @@ function Disk_2D_FaceOn_Grid_analysis(
     midH_frac::Float64 = 0.5,
     midz_seperation::Int = 5,
     smoothed_kernal::Function = M5_spline,
-    h_mode::String = "intep"
+    h_mode::String = "closest"
 )
     function wrap_surf_dens(data::PhantomRevealerDataFrame, point::Array)::Float64
         return surface_density(data, point, smoothed_kernal, h_mode, "polar")

@@ -12,12 +12,12 @@ function Slicing_disk(file::String)
     Analysis_tag :: String = "Slicing_disk"
     # General setting
     smoothed_kernel :: Function = M6_spline                              # Allowed function: M4_spline, M5_spline, M6_spline, C2_Wendland, C4_Wendland, C6_Wendland
-    h_mode :: String = "closest"                                         # Allowed mode: "mean", "closest", "intep"
+    h_mode :: String = "closest"                                         # Allowed mode: "mean", "closest"
 
     # Output setting
     File_prefix :: String = "Slice"
-    HDF5 :: Bool = false                                                 # Extract the final result as HDF5 format
-    figure :: Bool = true                                                # Extract the final result as figure
+    HDF5 :: Bool = true                                                  # Extract the final result as HDF5 format
+    figure :: Bool = false                                               # Extract the final result as figure
 
     # Disk generating setting (Base on cylindrical coordinate (s,ϕ,z))
     Origin_sinks_id = 1                                                  # The id of sink which is located at the middle of disk.
@@ -129,7 +129,7 @@ function Slicing_disk(file::String)
 
         reduced_array = Vector{Array{Float64}}(undef, length(target_columns))
         for (i,index) in enumerate(target_column_index)
-            reduced_array[i] = dropdims(mean(Result.data_dict[index], dims = 2), dims = 2)'
+            reduced_array[i] = grid_reduction(Result.data_dict[index],2)'
         end
 
         rhog, rhod, vsg, vsd, vzg, vzd = reduced_array

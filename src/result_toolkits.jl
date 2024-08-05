@@ -83,7 +83,12 @@ function Faceon_polar_plot(Disk2Ddata :: Analysis_result, array_index :: Int64,L
     else
         fax.reset_fig()
     end
-    fax.pcolor_draw([z], [colormap],[z_unit],[Log_flag],[label_left],[vlim],false)
+    if isnothing(vlim)
+        entervlim = vlim
+    else
+        entervlim = [vlim]
+    end
+    fax.pcolor_draw([z], [colormap],[z_unit],[Log_flag],[label_left],entervlim,false)
     fax.ax.text(0.9,0.95,label_right,transform=fax.ax.transAxes,c="white", fontsize=14, verticalalignment="top", bbox=fax.props)
     fax.draw_fig()
     return fax
@@ -132,8 +137,4 @@ function spiral_detection(Disk2Ddata :: Analysis_result)
         beta = atan(abs(k))*(180/π)
     end
     error("This method have not done yet!")
-end
-
-function TESTHI()
-    println("HI")
 end

@@ -25,23 +25,6 @@ function add_necessary_quantity!(data::PhantomRevealerDataFrame)
     end
 end
 
-function _standard_estimate_h_intepolate(dfdata::DataFrame, rnorm::Vector)
-    """Assume data has been transfered to the reference_point-based coordinate"""
-    fallback::Float32 = 0.0
-    h_intepolate::Float32 = 0.0
-    total_weight::Float32 = 0.0
-    j = 0
-    for particle in eachrow(dfdata)
-        j += 1
-        distance = rnorm[j]
-        h_particle = particle.h
-        weight = 1.0 / distance
-        h_intepolate += weight * h_particle
-        total_weight += weight
-    end
-    return total_weight > 0 ? h_intepolate / total_weight : fallback
-end
-
 function _easy_estimate_h_intepolate(dfdata::DataFrame, rnorm::Vector)
     """
     Give a specific smoothed radius to calculate
@@ -55,18 +38,17 @@ function _easy_estimate_h_intepolate(dfdata::DataFrame, rnorm::Vector)
 end
 
 """
-    estimate_h_intepolate(data::PhantomRevealerDataFrame, rnorm::Vector,mode::String ="intep")
+    estimate_h_intepolate(data::PhantomRevealerDataFrame, rnorm::Vector,mode::String ="closest")
 Provide a smoothed radius for interpolation.
 
 mode: 
-"intep": Intepolate h by local
 "closest": Choose h of the closest particles.
 "mean": use the mean value of h
 
 # Parameters
 - `data :: PhantomRevealerDataFrame`: The SPH data that is stored in `PhantomRevealerDataFrame` 
 - `rnorm :: Vector`: The distance between reference point and every particles. 
-- `mode :: String ="intep"`: The mode of interpolation. (Allowed value: "intep", "closest", "mean")
+- `mode :: String ="closest"`: The mode of interpolation. (Allowed value: "closest", "mean")
 
 # Returns
 - `Float32`: The smoothed radius h.
@@ -74,7 +56,7 @@ mode:
 function estimate_h_intepolate(
     data::PhantomRevealerDataFrame,
     rnorm::Vector,
-    mode::String = "intep",
+    mode::String = "closest",
 )
     dfdata = data.dfdata
     if !(haskey(data.params, "h_mean"))
@@ -84,22 +66,20 @@ function estimate_h_intepolate(
         return data.params["h_mean"]
     elseif (mode == "closest")
         return _easy_estimate_h_intepolate(dfdata, rnorm)
-    elseif (mode == "intep")
-        return _standard_estimate_h_intepolate(dfdata, rnorm)
     else
         error("IntepolateError: Invaild mode of h calculattion.")
     end
 end
 
 """
-    density(data::PhantomRevealerDataFrame, reference_point::Vector, smoothed_kernal:: Function = M5_spline,h_mode::String="intep", coordinate_flag::String = "cart")
+    density(data::PhantomRevealerDataFrame, reference_point::Vector, smoothed_kernal:: Function = M5_spline,h_mode::String="closest", coordinate_flag::String = "cart")
 Calculate the density ρ at the given reference point by SPH interpolation
 
 # Parameters
 - `data :: PhantomRevealerDataFrame`: The SPH data that is stored in `PhantomRevealerDataFrame`
 - `reference_point :: Vector`: The reference point for interpolation.
 - `smoothed_kernal :: Function = M5_spline`: The Kernel function for interpolation.
-- `h_mode :: String="intep"`: The mode for finding a proper smoothed radius. (Allowed value: "intep", "closest", "mean")
+- `h_mode :: String="closest"`: The mode for finding a proper smoothed radius. (Allowed value:  "closest", "mean")
 - `coordinate_flag :: String = "cart"`: The coordinate system that is used for given the target. Allowed value: ("cart", "polar") 
 
 # Returns
@@ -119,7 +99,7 @@ function density(
     data::PhantomRevealerDataFrame,
     reference_point::Vector,
     smoothed_kernal::Function = M5_spline,
-    h_mode::String = "intep",
+    h_mode::String = "closest",
     coordinate_flag::String = "cart",
 )
     """
@@ -150,14 +130,14 @@ function density(
 end
 
 """
-    gradient_density(data::PhantomRevealerDataFrame, reference_point::Vector, smoothed_kernal:: Function = M5_spline,h_mode::String="intep", coordinate_flag::String = "cart")
+    gradient_density(data::PhantomRevealerDataFrame, reference_point::Vector, smoothed_kernal:: Function = M5_spline,h_mode::String="closest", coordinate_flag::String = "cart")
 Calculate the grident of density ∇ρ at the given reference point by SPH interpolation
 
 # Parameters
 - `data :: PhantomRevealerDataFrame`: The SPH data that is stored in `PhantomRevealerDataFrame`
 - `reference_point :: Vector`: The reference point for interpolation.
 - `smoothed_kernal :: Function = M5_spline`: The Kernel function for interpolation.
-- `h_mode :: String="intep"`: The mode for finding a proper smoothed radius. (Allowed value: "intep", "closest", "mean")
+- `h_mode :: String="closest"`: The mode for finding a proper smoothed radius. (Allowed value: "closest", "mean")
 - `coordinate_flag :: String = "cart"`: The coordinate system that is used for given the target. Allowed value: ("cart", "polar") 
 
 # Returns
@@ -177,7 +157,7 @@ function gradient_density(
     data::PhantomRevealerDataFrame,
     reference_point::Vector,
     smoothed_kernal::Function = M5_spline,
-    h_mode::String = "intep",
+    h_mode::String = "closest",
     coordinate_flag::String = "cart",
 )
     """
@@ -225,7 +205,7 @@ function gradient_density(
 end
 
 """
-    quantity_intepolate(data::PhantomRevealerDataFrame, reference_point::Vector, column_names::Vector{String}, smoothed_kernal:: Function = M5_spline,h_mode::String="intep", coordinate_flag::String = "cart")
+    quantity_intepolate(data::PhantomRevealerDataFrame, reference_point::Vector, column_names::Vector{String}, smoothed_kernal:: Function = M5_spline,h_mode::String="closest", coordinate_flag::String = "cart")
 Calculate the value of every requested quantities at the given reference point by SPH interpolation.
 Those points whose neighborhood has no particles around it would be label as `NaN`
 
@@ -234,7 +214,7 @@ Those points whose neighborhood has no particles around it would be label as `Na
 - `reference_point :: Vector`: The reference point for interpolation.
 - `column_names :: Vector{String}`: The quantities that would be interpolated.
 - `smoothed_kernal :: Function = M5_spline`: The Kernel function for interpolation.
-- `h_mode :: String="intep"`: The mode for finding a proper smoothed radius. (Allowed value: "intep", "closest", "mean")
+- `h_mode :: String="closest"`: The mode for finding a proper smoothed radius. (Allowed value: "closest", "mean")
 - `coordinate_flag :: String = "cart"`: The coordinate system that is used for given the target. Allowed value: ("cart", "polar") 
 
 # Returns
@@ -256,7 +236,7 @@ function quantity_intepolate(
     reference_point::Vector,
     column_names::Vector{String},
     smoothed_kernal::Function = M5_spline,
-    h_mode::String = "intep",
+    h_mode::String = "closest",
     coordinate_flag::String = "cart",
 )
     """
@@ -311,14 +291,14 @@ function quantity_intepolate(
 end
 
 """
-    surface_density(data::PhantomRevealerDataFrame, reference_point::Vector, smoothed_kernal:: Function = M5_spline,h_mode::String="intep", coordinate_flag::String = "cart")
+    surface_density(data::PhantomRevealerDataFrame, reference_point::Vector, smoothed_kernal:: Function = M5_spline,h_mode::String="closest", coordinate_flag::String = "cart")
 Calculate the surface density Σ at the given reference point by SPH interpolation
 
 # Parameters
 - `data :: PhantomRevealerDataFrame`: The SPH data that is stored in `PhantomRevealerDataFrame`
 - `reference_point :: Vector`: The reference point for interpolation.
 - `smoothed_kernal :: Function = M5_spline`: The Kernel function for interpolation.
-- `h_mode :: String="intep"`: The mode for finding a proper smoothed radius. (Allowed value: "intep", "closest", "mean")
+- `h_mode :: String="closest"`: The mode for finding a proper smoothed radius. (Allowed value: "closest", "mean")
 - `coordinate_flag :: String = "cart"`: The coordinate system that is used for given the target. Allowed value: ("cart", "polar") 
 
 # Returns
@@ -338,7 +318,7 @@ function surface_density(
     data::PhantomRevealerDataFrame,
     reference_point::Vector,
     smoothed_kernal::Function = M5_spline,
-    h_mode::String = "intep",
+    h_mode::String = "closest",
     coordinate_flag::String = "cart",
 )
     """
@@ -369,14 +349,14 @@ function surface_density(
 end
 
 """
-    gradient_surface_density(data::PhantomRevealerDataFrame, reference_point::Vector, smoothed_kernal:: Function = M5_spline,h_mode::String="intep", coordinate_flag::String = "cart")
+    gradient_surface_density(data::PhantomRevealerDataFrame, reference_point::Vector, smoothed_kernal:: Function = M5_spline,h_mode::String="closest", coordinate_flag::String = "cart")
 Calculate the gredient of surface density ∇Σ at the given reference point by SPH interpolation
 
 # Parameters
 - `data :: PhantomRevealerDataFrame`: The SPH data that is stored in `PhantomRevealerDataFrame`
 - `reference_point :: Vector`: The reference point for interpolation.
 - `smoothed_kernal :: Function = M5_spline`: The Kernel function for interpolation.
-- `h_mode :: String="intep"`: The mode for finding a proper smoothed radius. (Allowed value: "intep", "closest", "mean")
+- `h_mode :: String="closest"`: The mode for finding a proper smoothed radius. (Allowed value: "closest", "mean")
 - `coordinate_flag :: String = "cart"`: The coordinate system that is used for given the target. Allowed value: ("cart", "polar") 
 
 # Returns
@@ -396,7 +376,7 @@ function gradient_surface_density(
     data::PhantomRevealerDataFrame,
     reference_point::Vector,
     smoothed_kernal::Function = M5_spline,
-    h_mode::String = "intep",
+    h_mode::String = "closest",
     coordinate_flag::String = "cart",
 )
     """
@@ -438,7 +418,7 @@ function gradient_surface_density(
 end
 
 """
-    quantity_intepolate_2D(data::PhantomRevealerDataFrame, reference_point::Vector, column_names::Vector{String}, smoothed_kernal:: Function = M5_spline,h_mode::String="intep", coordinate_flag::String = "cart")
+    quantity_intepolate_2D(data::PhantomRevealerDataFrame, reference_point::Vector, column_names::Vector{String}, smoothed_kernal:: Function = M5_spline,h_mode::String="closest", coordinate_flag::String = "cart")
 Calculate the value of every requested quantities at the given reference point by SPH interpolation ON THE 2D PLANE.
 Those points whose neighborhood has no particles around it would be label as `NaN`
 
@@ -447,7 +427,7 @@ Those points whose neighborhood has no particles around it would be label as `Na
 - `reference_point :: Vector`: The reference point for interpolation.
 - `column_names :: Vector{String}`: The quantities that would be interpolated.
 - `smoothed_kernal :: Function = M5_spline`: The Kernel function for interpolation.
-- `h_mode :: String="intep"`: The mode for finding a proper smoothed radius. (Allowed value: "intep", "closest", "mean")
+- `h_mode :: String="closest"`: The mode for finding a proper smoothed radius. (Allowed value: "closest", "mean")
 - `coordinate_flag :: String = "cart"`: The coordinate system that is used for given the target. Allowed value: ("cart", "polar") 
 
 # Returns
@@ -469,7 +449,7 @@ function quantity_intepolate_2D(
     reference_point::Vector,
     column_names::Vector{String},
     smoothed_kernal::Function = M5_spline,
-    h_mode::String = "intep",
+    h_mode::String = "closest",
     coordinate_flag::String = "cart",
 )
     """

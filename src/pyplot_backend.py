@@ -1,4 +1,5 @@
 import subprocess
+import matplotlib.artist
 import numpy as np
 import matplotlib.font_manager
 import matplotlib.figure as mfg
@@ -8,8 +9,8 @@ import matplotlib.cm as cm
 import matplotlib.colors as mcolors
 import matplotlib.gridspec as gspec
 
-# Set nan if divided by zero
-np.seterr(divide='ignore')
+# Set nan if divided by zero or taking log for negative number.
+np.seterr(divide='ignore',invalid='ignore')
 
 def replace_inf_with_nan(arr):
     mask = np.isinf(arr)
@@ -136,7 +137,14 @@ class figure_ax:
         self.ax = None
         self.ncols = None
         self.nrows = None
-        self.proj = proj
+        if (not isinstance(proj,list)) and (not isinstance(proj,str)) and (not proj is None):
+            raise ValueError("The 'proj' argument should be in either str, list or None")
+        else:
+            if isinstance(proj,list):
+                for p in proj:
+                    if (not isinstance(p,str)) and (not p is None):
+                        raise ValueError("All the element in 'proj' with type 'list' should be in str or None")
+            self.proj = proj
         
     def checking_initialized(self):
         if self.fig is None or self.ax is None:
@@ -151,44 +159,49 @@ class figure_ax:
             gs = gspec.GridSpec(nrows, ncols, figure=self.fig, hspace=0.0, wspace=0.0)
 
             ax_list = []
-
-            for c in range(ncols):
-                for r in range(nrows):
-                    if ncols > 1 and nrows > 1:
-                        sharex = 'all'
-                        sharey = 'all'
-                    elif ncols > 1:
+            for r in range(nrows):
+                for c in range(ncols):
+                    if isinstance(self.proj,list):
+                        projection = self.proj[r*ncols + c]
                         sharex = None
-                        sharey = 'all'
-                    elif nrows > 1:
-                        sharex = 'all'
                         sharey = None
                     else:
-                        sharex = None
-                        sharey = None
+                        projection = self.proj
+                        if ncols > 1 and nrows > 1:
+                            sharex = 'all'
+                            sharey = 'all'
+                        elif ncols > 1:
+                            sharex = None
+                            sharey = 'all'
+                        elif nrows > 1:
+                            sharex = 'all'
+                            sharey = None
+                        else:
+                            sharex = None
+                            sharey = None
 
                     if c == 0 and r == 0:
-                        ax = self.fig.add_subplot(gs[r, c], projection=self.proj)
+                        ax = self.fig.add_subplot(gs[r, c], projection=projection)
                     else:
-                        ax = self.fig.add_subplot(gs[r, c], projection=self.proj, sharex=ax_list[0] if sharex else None, sharey=ax_list[0] if sharey else None)
+                        ax = self.fig.add_subplot(gs[r, c], projection=projection, sharex=ax_list[0] if sharex else None, sharey=ax_list[0] if sharey else None)
                     ax_list.append(ax)
                     
-                    if self.proj != 'polar':
+                    if projection == 'polar':
+                        ax.set_xticklabels([]) 
+                        ax.set_yticklabels([])  
+                        ax.xaxis.set_visible(False)  
+                        ax.yaxis.set_visible(False)
+                    else:
                         if c != 0:  
                             plt.setp(ax.get_yticklabels(), visible=False)
                         
                         if r != nrows - 1:  
                             plt.setp(ax.get_xticklabels(), visible=False)
-                    else:
-                        ax.set_xticklabels([]) 
-                        ax.set_yticklabels([])  
-                        ax.xaxis.set_visible(False)  
-                        ax.yaxis.set_visible(False)  
                         
 
             self.ax = ax_list[0] if (ncols == 1 and nrows == 1) else ax_list
         
-            if self.proj != 'polar':
+            if (not isinstance(self.proj,list)) and (self.proj != 'polar'):
                 plt.tight_layout()
                 
     def get_number_of_ax(self):
@@ -250,7 +263,7 @@ class figure_ax:
             
 class two_axes_plot(figure_ax):
     props = dict(boxstyle='round', facecolor='black')
-    anato_text_position=(-0.02,0.95)
+    anato_text_position=(0.00,0.95)
     def __init__(self, x:np.ndarray, y:np.ndarray, xlabel:str, ylabel:str, proj=None):
         super().__init__(proj)
         self._x : np.ndarray = np.array(x)
@@ -335,20 +348,22 @@ class two_axes_plot(figure_ax):
             else:
                 if isinstance(ax, list):
                     cont = ax[i].pcolor(X,Y,image, cmap=colormaps[j], norm=Norms[j])
-                    ax[i].text(*cls.anato_text_position,anatonate_labels[k] ,transform=ax[i].transAxes,c='white', fontsize=14, verticalalignment='top', bbox=cls.props)
+                    ax[i].text(*cls.anato_text_position,anatonate_labels[k], horizontalalignment='left',transform=ax[i].transAxes,c='white', fontsize=14, verticalalignment='top', bbox=cls.props)
                     if i in colorbar_pos_indies:
                         colorbar = self.setup_colorbar(cont,colorbar_ax_label=cax_label[j])
                         colorbar.set_label(clabels[j])
                         j += 1
                     ax[i].set_xlim(xlim[0],xlim[1])
                     ax[i].set_ylim(ylim[0],ylim[1])
+                    ax[i].set_rasterized(True)
                 else:
                     cont = ax.pcolor(X,Y,image, cmap=colormaps[0], norm=Norms[0])
-                    ax.text(*cls.anato_text_position,anatonate_labels[0] ,transform=ax.transAxes,c='white', fontsize=14, verticalalignment='top', bbox=cls.props)
+                    ax.text(*cls.anato_text_position,anatonate_labels[0], horizontalalignment='left', transform=ax.transAxes,c='white', fontsize=14, verticalalignment='top', bbox=cls.props)
                     colorbar = self.setup_colorbar(cont,colorbar_ax_label=cax_label[0])
                     colorbar.set_label(clabels[0])
                     ax.set_xlim(xlim[0],xlim[1])
                     ax.set_ylim(ylim[0],ylim[1])
+                    ax.set_rasterized(True)
                     
         if draw:
             self.draw_fig()
@@ -374,13 +389,15 @@ class two_axes_plot(figure_ax):
             else:
                 if isinstance(ax, list):
                     ax[i].streamplot(X,Y,vxgrid,vzgrid,color=color, density=density)
+                    ax[i].set_rasterized(True)
                 else:
                     ax.streamplot(X,Y,vxgrid,vzgrid,color=color, density=density)
+                    ax.set_rasterized(True)
         if draw:
             self.draw_fig()
         
 class polar_plot(two_axes_plot):
-    anato_text_position=(-0.02,0.95)
+    anato_text_position=(0.00,0.95)
     def __init__(self, s: np.ndarray, phi: np.ndarray, slabel: str, philabel: str):
         super().__init__(phi, s, philabel, slabel,  'polar')
 
@@ -420,7 +437,7 @@ class polar_plot(two_axes_plot):
         
             
 class cart_plot(two_axes_plot):
-    anato_text_position=(0.0065,0.98)
+    anato_text_position=(0.00,0.98)
     def __init__(self, x: np.ndarray, y: np.ndarray, xlabel: str, ylabel: str):
         super().__init__(x, y, xlabel, ylabel)
     
@@ -449,8 +466,112 @@ class cart_plot(two_axes_plot):
         return self._X
     
     def set_ylabel(self,axid):
-        self.ax[axid].set_ylabel(self.ylabel)
+        if self.get_number_of_ax() > 1:
+            self.ax[axid].set_ylabel(self.ylabel)
+        else:
+            self.ax.set_ylabel(self.ylabel)
     
     def set_xlabel(self,axid):
-        self.ax[axid].set_xlabel(self.xlabel)
+        if self.get_number_of_ax() > 1:
+            self.ax[axid].set_xlabel(self.xlabel)
+        else:
+            self.ax.set_xlabel(self.xlabel)
+        
+class LcartRpolar_plot(figure_ax):
+    props = dict(boxstyle='round', facecolor='black')
+    anato_text_position=(0.00,0.95)
+    def __init__(self, x, y, xlabel, ylabel, logx, logy, s, phi, slabel, philabel):
+        super().__init__(proj=[None, 'polar'])
+        self.x : np.ndarray = x
+        self.y : np.ndarray = y
+        self.s : np.ndarray = s
+        self.phi : np.ndarray = phi
+        self.xlabel : str = xlabel
+        self.ylabel : str = ylabel
+        self.slabel : str = slabel
+        self.philabel : str = philabel
+        self.logx : bool = logx
+        self.logy : bool = logy
+        self.meshgrid()
+        
+    def meshgrid(self):
+        self.X,self.Y = np.meshgrid(self.x, self.y)
+        self.PHI,self.S = np.meshgrid(self.phi, self.s)
+    
+    def grid_shape(self,ax_index):
+        if ax_index == 0:
+            return (self.y.shape[0], self.x.shape[0])
+        elif ax_index == 1:
+            return (self.s.shape[0], self.phi.shape[0])
+        else:
+            raise IndexError("Only index 0 or 1 is allowed!")
+    
+    def call_grids(self,ax_index):
+        if ax_index == 0:
+            return self.X,self.Y
+        elif ax_index == 1:
+            return self.PHI,self.S
+        else:
+            raise IndexError("Only index 0 or 1 is allowed!")
+    
+    def call_axes(self,ax_index):
+        if ax_index == 0:
+            return self.x,self.y
+        elif ax_index == 1:
+            return self.phi,self.s
+        else:
+            raise IndexError("Only index 0 or 1 is allowed!")
+    
+    def setup_fig(self,figsize=(12, 7)):
+        return super().setup_fig(1, 2, figsize)
+    
+    def reset_fig(self):
+        figsize = tuple(self.fig.get_size_inches())
+        self.close_fig()
+        self.setup_fig(figsize)
+        
+    def set_Lcart_label(self,ax_index):
+        self.ax[ax_index].set_ylabel(self.ylabel)
+        self.ax[ax_index].set_xlabel(self.ylabel)
+    
+    def pcolor_plot(self, image, ax_index:int, colormap:str, clabel:str, Log_flag:bool, anatonate_label:str, vlim = None,draw=True):
+        cls = self.__class__
+        image = np.array(image)
+        if image.shape != self.grid_shape(ax_index):
+            raise IndexError(f"Mismatching array size! The allowed array size {self.grid_shape(ax_index)} didn't match the size of 'z' {image.shape}!")
+        grids = self.call_grids(ax_index)
+        
+        # Preparing Color limit
+        if vlim is None:
+            vlim = Get_vminmax(image)
+        else:
+            if len(vlim) != 2:
+                raise ValueError(f"Wrong format of 'vlims' parameters! The clims parameters should be [[vmin1,vmax1], [vmin2,vmax2], [vmin3,vmax3], ... ]")
+            
+        # Preparing Color Norm
+        Norm = mcolors.LogNorm(*vlim) if Log_flag else mcolors.Normalize(*vlim) 
+        
+        # Preparing interior colormap ax labels
+        cax_label = "<colorbar_L>" if ax_index == 0 else "<colorbar_R>"
+        
+        # Make sure the axis has its minimun while plotting
+        x,y = self.call_axes(ax_index)
+        xlim = [x[0],x[-1]]
+        ylim = [y[0],y[-1]]
+        
+        ax = self.ax[ax_index]
+        
+        cont = ax.pcolor(*grids,image, cmap=colormap, norm=Norm)
+        ax.text(*cls.anato_text_position,anatonate_label, horizontalalignment='left',transform=ax.transAxes,c='white', fontsize=14, verticalalignment='top', bbox=cls.props)
+        colorbar = self.setup_colorbar(cont,colorbar_ax_label=cax_label)
+        colorbar.set_label(clabel)
+        ax.set_xlim(xlim[0],xlim[1])
+        ax.set_ylim(ylim[0],ylim[1])
+        if (ax_index == 0) and (self.logx):
+            ax.set_xscale('log')
+        if (ax_index == 0) and (self.logy):
+            ax.set_yscale('log')
+        ax.set_rasterized(True)
+        if draw:
+            self.draw_fig()
         

@@ -190,7 +190,7 @@ function _read_array_blocks(fp, def_int_dtype, def_real_dtype)
 end
 
 """
-    function read_phantom(filename::String, separate_types::String = "sinks", ignore_inactive::Bool = true)
+    function read_phantom(filename::String, separate_types::String = "sinks", ignore_inactive::Bool = true) :: Union{PhantomRevealerDataFrame,Vector}
 
 Note: This implementation is inspired by the function of the same name in the 'saracen' python package.
 Check out the documentation of `saracen <https://sarracen.readthedocs.io/en/latest/index.html>`_
@@ -217,12 +217,12 @@ data frame in the field `params`.
 # Examples
 ## Example 1: By default, SPH particles are grouped into one data frame and sink particles into a second data frame.
 ```julia
-prdf, prdf_sinks = read_phantom('dumpfile_00000')
+prdf, prdf_sinks = read_phantom("dumpfile_00000")
 ```
 ## Example 2: A dump file containing multiple particle types, say gas + dust + sinks, can separated into their own data frames
-    by specifying `separate_types='all'`.
+    by specifying `separate_types="all"`.
 ```julia
-prdf_gas, prdf_dust, prdf_sinks = read_phantom('multiple_types_00000', separate_types='all')
+prdf_gas, prdf_dust, prdf_sinks = read_phantom("multiple_types_00000", separate_types="all")
 ```
 
 # Notes
@@ -235,7 +235,7 @@ function read_phantom(
     filename::String,
     separate_types::String = "sinks",
     ignore_inactive::Bool = true,
-)
+) :: Union{PhantomRevealerDataFrame,Vector}
     open(filename, "r") do fp
         def_int_dtype, def_real_dtype = _read_capture_pattern(fp)
         file_identifier = _read_file_identifier(fp)
