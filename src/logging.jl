@@ -71,14 +71,14 @@ macro setup_logging(logfile)
 end
 
 """
-    get_project_version() :: String
+    get_PhantomRevealer_version() :: String
 
 Get the version of the current project from the `Project.toml` file.
 
 # Returns
 `String`: The version of the current project.
 """
-function get_project_version()
+function get_PhantomRevealer_version()
     current_dir = @__DIR__
     project_toml_path = joinpath(current_dir, "..", "Project.toml")
     project_toml = Pkg.TOML.parsefile(project_toml_path)
@@ -112,7 +112,7 @@ end
 Log the initial message including the version of the project.
 """
 function First_logging()
-    version = get_project_version()
+    version = get_PhantomRevealer_version()
     @info "Start Logging...\nPhantomRevealer analysis Module\n  Version: $version\n    Made by Wei-Shan Su, 2024\n"
 end
 
@@ -152,6 +152,6 @@ Generate a file identifier string.
 """
 function file_identifier(Analysis_type::String)
     current_time = Dates.format(now(), "dd/mm/yyyy HH:MM:SS.s")
-    str = "FT:PhantomRevealer:$(get_project_version()) ($(Analysis_type)): $(current_time)"
+    str = "FT:PhantomRevealer:$(get_PhantomRevealer_version()) ($(Analysis_type)): $(current_time)"
     return str
 end

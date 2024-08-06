@@ -355,7 +355,7 @@ function Read_HDF5(filepath::String, close_warn::Bool=false)
         return dict
     end
     function PR_version_match(file_identifier::String, close_warn::Bool=false)
-        version = get_project_version()
+        version = get_PhantomRevealer_version()
         pattern = r"PhantomRevealer:(\d+\.\d+\.\d+)"
         m = match(pattern, file_identifier)
         if m !== nothing

@@ -22,6 +22,16 @@ include("$_module_location/result_toolkits.jl")
 
 # Initialize function
 """
+    get_PhantomRevealer_path()
+Get the folder of currently loaded PhantomRevealer
+
+# Returns
+- `String`: The folder of of currently loaded PhantomRevealer.
+"""
+function get_PhantomRevealer_path()
+    return dirname(dirname(pathof(PhantomRevealer)))
+end
+"""
     initialize_pyplot_backend()
 Initialize the built-in pyplot backend.
 """
