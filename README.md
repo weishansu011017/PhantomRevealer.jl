@@ -376,5 +376,6 @@ Sarracen documentation: [Sarracen Documentation](https://sarracen.readthedocs.io
 
 ## References
 
-[1]:[Smoothed Particle Hydrodynamics and Magnetohydrodynamics ](https://ui.adsabs.harvard.edu/abs/2012JCoPh.231..759P/abstract) (Daniel J. Price, *Journal of Computational Physics, Volume 231, Issue 3, p. 759-794.* 2012)
+[1]:[Smoothed Particle Hydrodynamics and Magnetohydrodynamics ](https://ui.adsabs.harvard.edu/abs/2012JCoPh.231..759P/abstract) (Daniel J. Price,.  *Journal of Computational Physics, Volume 231, Issue 3, p. 759-794.* 2012)
 
+[2]:[How Efficient Is the Streaming Instability in Viscous Protoplanetary Disks?](https://ui.adsabs.harvard.edu/abs/2020ApJ...891..132C/abstract) (Ken Chen, Min-Kai Lin,. *The Astrophysical Journal,  Volume 891, Issue 2, id.132, 17 pp.* 2020)

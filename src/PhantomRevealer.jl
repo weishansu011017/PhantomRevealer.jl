@@ -19,6 +19,7 @@ include("$_module_location/Grid_interpolation.jl")
 #Level 6 (Extract data)
 include("$_module_location/Extract_data.jl")
 include("$_module_location/result_toolkits.jl")
+include("$_module_location/growth_rate.jl")
 
 # Initialize function
 """
