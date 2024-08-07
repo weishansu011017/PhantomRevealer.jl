@@ -100,17 +100,70 @@ function growth_rate(;Κx :: Float64,
 end
 
 """
+    function growth_rate_vectors(;Κx :: AbstractVector, 
+                     Κz :: AbstractVector,
+                     St :: Float64,
+                     cs :: Float64,
+                     ρg :: Float64,
+                     ρd :: Float64, 
+                     vx :: Float64,
+                     vy :: Float64,
+                     ωx :: Float64,
+                     ωy :: Float64) :: Array
+
+Allowed an vector entrence for Κx and Κz to estimate the growth rate.
+
+# Parameters
+- `Κx`: The dimentionless perturbation wavenumber along x-axis in the shearing box(radial axis)    (Κx = kx * Hg)
+- `Κz`: The dimentionless perturbation wavenumber along z-axis in the shearing box(vertical axis)  (Κz = kz * Hg)
+- `St`: The Stokes number
+- `cs`: The sound speed                                                                            (cs = Ω * Hg)
+- `ρg`: The density of gaseous fluid in the midplane of the disk.
+- `ρd`: The density of dusty fluid in the midplane of the disk.
+- `vx`: The velocity of gaseous fluid along the x-axis in the shearing box(radial axis)
+- `vy`: The velocity of gaseous fluid along the y-axis in the shearing box(azimuthal axis)
+- `ωx`: The velocity of dusty fluid along the x-axis in the shearing box(radial axis)
+- `ωy`: The velocity of dusty fluid along the y-axis in the shearing box(azimuthal axis)
+
+# Return 
+- `Array`: The dimentionless growth rate (s/Ω)(s = Re(σ))
+"""
+function growth_rate_vectors(;Κx :: AbstractVector, 
+                     Κz :: AbstractVector,
+                     St :: Float64,
+                     cs :: Float64,
+                     ρg :: Float64,
+                     ρd :: Float64, 
+                     vx :: Float64,
+                     vy :: Float64,
+                     ωx :: Float64,
+                     ωy :: Float64) :: Array
+    s = Array{Float64}(undef,length(Κx),length(Κz))
+    @threads for i in eachindex(Κx)
+        for j in eachindex(Κz)
+            s[i,j] = growth_rate(Κx=Κx[i],Κz=Κz[j],St=St,cs=cs,ρg=ρg,ρd=ρd,vx=vx,vy=vy,ωx=ωx,ωy=ωy)
+        end
+    end
+    return s
+end
+
+"""
     growth_rate_input_dict()
 Since we fixed the function `growth_rate()` into a fully keyword arguments input-only function, an empty dict for enter the input is presented.
+
+The dictionary will not include "Κx" and "Κz"
 
 # Returns
 - `Dict{Symbol, Float64}`: The empty input dictionary with all of the keywords in `growth_rate()`.
 """
 function growth_rate_input_dict()
     input :: Dict{Symbol, Float64}= Dict{Symbol, Float64}()
+    exclude = [:Κx, :Κz]
     keywords :: Vector = Base.kwarg_decl.(methods(growth_rate))[1]
     for keyword in keywords
+        if !(keyword ∈ exclude)
         input[keyword] = 0.0
+        end
     end
     return input
 end
