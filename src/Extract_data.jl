@@ -443,6 +443,8 @@ function transfer_cgs!(data::Analysis_result, year::Bool = true)
             data.time *= utime
             data.params["time"] *= utime
         end
+        data.params["graindens"] *= urho
+        data.params["grainsize"] *= udist
 
 
         column_unit = Dict{Int,LaTeXString}()
@@ -551,4 +553,37 @@ function add_dust2gas_ratio!(data::Analysis_result, column_index::Int64 = 61)
     data.column_names[column_index] = "[$column_index  dust-to-gas]"
     add_more_label!(data,column_index, L"\varepsilon")
     data.data_dict[column_index] = d2g
+end
+
+"""
+    add_St!(data::Analysis_result, column_index::Int64 = 62)
+Add the column of Stokes number.
+
+# Parameters
+- `data :: Analysis_result`: The data.
+- `column_index :: Int64 = 61`: The index of column.
+"""
+function add_St!(data::Analysis_result, column_index::Int64 = 62)
+    for column in values(data.column_names)
+        if occursin("St",column)
+            return
+        end
+    end
+    transfer_cgs!(data)
+    Sigmag :: Union{Nothing, Array{Float64}} = nothing
+    for key in keys(data.column_names)
+        column_name = data.column_names[key]
+        if occursin("Sigmam_g", column_name) || occursin("Sigma_g", column_name)
+            Sigmag = data.data_dict[key]
+        end
+    end
+    if isnothing(Sigmag)
+        error("LookupError: The surface density column has not found!")
+    end
+    grainsize = data.params["grainsize"]
+    graindens = data.params["graindens"]
+    St = (π/2)*(grainsize*graindens)./Sigmag
+    data.column_names[column_index] = "[$column_index  St]"
+    add_more_label!(data,column_index, L"St")
+    data.data_dict[column_index] = St
 end

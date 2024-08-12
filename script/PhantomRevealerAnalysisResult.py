@@ -2,6 +2,16 @@ import numpy as np
 import h5py
 import re
 
+def astrounit2KeperianAngularVelocity(r,M):
+    r_cgs = 14959787069100.0 * r
+    M_cgs =1.9891e33* M
+    G = 6.67e-8
+    Ω = np.sqrt((G*M_cgs)/(r_cgs**3))
+    return Ω
+
+def locally_isothermal_sound_speed(r,q,cs0):
+    return cs0 * (r**(-q))
+
 class PhantomRevealerAnalysisResult:
     '''
     The analysis data that genetared from PhantomRevealer.
@@ -160,3 +170,40 @@ class PhantomRevealerAnalysisResult:
             
             data = PhantomRevealerAnalysisResult(time, data_dict, axes, column_names, params)
             return data
+        
+    def add_dust2gas_ratio(self, column_index= 61):
+        self.transfer_cgs()
+        rhog = None
+        rhod = None
+        for key in self.column_names.keys():
+            column_name = self.column_names[key]
+            if ("rhom_g" in column_name) or ("rho_g" in column_name):
+                rhog = self.data_dict[key]
+            elif ("rhom_d" in column_name) or ("rho_d" in column_name):
+                rhod = self.data_dict[key]
+        if (rhog is None) or (rhod is None):
+            raise LookupError("The density column has not found!")
+        d2g = rhod/rhog
+        self.column_names[column_index] = f"[{column_index}  dust-to-gas]"
+        self.add_more_label(column_index,r"$\varepsilon$")
+        self.data_dict[column_index] = d2g
+        
+    def add_St(self, column_index= 62):
+        for key in self.column_names.keys():
+            column = self.column_names[key]
+            if 'St' in column:
+                return
+        self.transfer_cgs()
+        Sigmag = None
+        for key in self.column_names.keys():
+            column_name = self.column_names[key]
+            if ("Sigmam_g" in column_name) or ("Sigma_g" in column_name):
+                Sigmag = self.data_dict[key]
+        if (Sigmag is None):
+            raise LookupError("The surface density column has not found!")
+        a_s = self.params['grainsize']
+        rho_s = self.params['graindens']
+        St = (np.pi/2)*(a_s*rho_s)/Sigmag
+        self.column_names[column_index] = f"[{column_index}  St]"
+        self.add_more_label(column_index,r"St")
+        self.data_dict[column_index] = St

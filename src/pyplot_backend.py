@@ -12,6 +12,11 @@ import matplotlib.gridspec as gspec
 # Set nan if divided by zero or taking log for negative number.
 np.seterr(divide='ignore',invalid='ignore')
 
+def value2closestvalueindex(array, target):
+    array = np.asarray(array)
+    target_index = np.argmin(np.abs(array - target))
+    return target_index
+
 def replace_inf_with_nan(arr):
     mask = np.isinf(arr)
     arr[mask] = np.nan
@@ -56,6 +61,13 @@ def openinteractive():
     if not plt.isinteractive():
         plt.ion()
             
+def closeinteractive():
+    '''
+    Close the interactive interface for plotting
+    '''
+    if plt.isinteractive():
+        plt.ioff()
+        
 def Get_vminmax(array:np.ndarray):
     '''
     Calculate the minimum and maximum value for colorbar.
@@ -237,6 +249,12 @@ class figure_ax:
                 colorbar = self.fig.colorbar(cont,cax = colarbar_ax)
         return colorbar
     
+    def clear_ax(self,ax_index):
+        if self.get_number_of_ax() > 1:
+            self.ax[ax_index].clear()
+        else:
+            self.ax.clear()
+    
     def draw_fig(self):
         if not self.fig is None:
             self.fig.canvas.draw()
@@ -253,7 +271,7 @@ class figure_ax:
             plt.close(self.fig) 
             self.fig = None
             self.ax = None
-            
+        
     def reset_fig(self):
         ncols = self.ncols
         nrows = self.nrows
@@ -476,6 +494,18 @@ class cart_plot(two_axes_plot):
             self.ax[axid].set_xlabel(self.xlabel)
         else:
             self.ax.set_xlabel(self.xlabel)
+            
+    def set_yscale(self,axid,scale='linear'):
+        if self.get_number_of_ax() > 1:
+            self.ax[axid].set_yscale(scale)
+        else:
+            self.ax.set_yscale(scale)
+    
+    def set_xscale(self,axid,scale='linear'):
+        if self.get_number_of_ax() > 1:
+            self.ax[axid].set_xscale(scale)
+        else:
+            self.ax.set_xscale(scale)
         
 class LcartRpolar_plot(figure_ax):
     props = dict(boxstyle='round', facecolor='black')
@@ -530,11 +560,15 @@ class LcartRpolar_plot(figure_ax):
         self.close_fig()
         self.setup_fig(figsize)
         
-    def set_Lcart_label(self,ax_index):
-        self.ax[ax_index].set_ylabel(self.ylabel)
-        self.ax[ax_index].set_xlabel(self.ylabel)
+    def set_Lcart_label(self):
+        self.ax[0].set_ylabel(self.ylabel)
+        self.ax[0].set_xlabel(self.xlabel)
+        
+    def set_Lcart_scale(self,scale='linear'):
+        self.ax[0].set_yscale(scale)
+        self.ax[0].set_xscale(scale)
     
-    def pcolor_plot(self, image, ax_index:int, colormap:str, clabel:str, Log_flag:bool, anatonate_label:str, vlim = None,draw=True):
+    def pcolor_draw(self, image, ax_index:int, colormap:str, clabel:str, Log_flag:bool, anatonate_label:str, vlim = None,draw=True):
         cls = self.__class__
         image = np.array(image)
         if image.shape != self.grid_shape(ax_index):
@@ -560,7 +594,6 @@ class LcartRpolar_plot(figure_ax):
         ylim = [y[0],y[-1]]
         
         ax = self.ax[ax_index]
-        
         cont = ax.pcolor(*grids,image, cmap=colormap, norm=Norm)
         ax.text(*cls.anato_text_position,anatonate_label, horizontalalignment='left',transform=ax.transAxes,c='white', fontsize=14, verticalalignment='top', bbox=cls.props)
         colorbar = self.setup_colorbar(cont,colorbar_ax_label=cax_label)
@@ -571,6 +604,9 @@ class LcartRpolar_plot(figure_ax):
             ax.set_xscale('log')
         if (ax_index == 0) and (self.logy):
             ax.set_yscale('log')
+        if (ax_index == 1):
+            ax.set_rmin(-1)
+            
         ax.set_rasterized(True)
         if draw:
             self.draw_fig()

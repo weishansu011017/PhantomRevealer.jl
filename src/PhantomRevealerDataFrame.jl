@@ -528,6 +528,22 @@ function add_Kepelarian_azimuthal_velocity!(data::PhantomRevealerDataFrame)
 end
 
 """
+    add_Kepelarian_angular_velocity!(data::PhantomRevealerDataFrame)
+Add the Kepelarian angular velocity for each particles.
+
+# Parameters
+- `data :: PhantomRevealerDataFrame`: The SPH data that is stored in `PhantomRevealerDataFrame`
+"""
+function add_Kepelarian_angular_velocity!(data::PhantomRevealerDataFrame)
+    if !(hasproperty(data.dfdata, "s"))
+        add_cylindrical!(data)
+    end
+    G = get_unit_G(data)
+    M = data.params["Origin_sink_mass"]
+    data.dfdata[!, "Ω_k"] = sqrt.((G * M) ./ (data.dfdata[!, "s"]).^3)
+end
+
+"""
     add_kinetic_energy!(data::PhantomRevealerDataFrame)
 Add the Kinetic energy for each particles in current frame.
 
@@ -801,6 +817,9 @@ function Analysis_params_recording(data::PhantomRevealerDataFrame, Analysis_type
     params["Analysis_type"] = Analysis_type
     params["Origin_sink_id"] = data_params["Origin_sink_id"]
     params["Origin_sink_mass"] = data_params["Origin_sink_mass"]
+    params["grainsize"] = data_params["grainsize"]
+    params["graindens"] = data_params["graindens"]
+    params["qfacdisc"] = data_params["qfacdisc"]
     params["udist"] = data_params["udist"]
     params["umass"] = data_params["umass"]
     params["utime"] = data_params["utime"]

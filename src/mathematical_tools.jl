@@ -115,3 +115,22 @@ function find_array_max_index(y::AbstractVector)
 
     return target_index
 end
+
+"""
+    astrounit2KeperianAngularVelocity(r :: Float64,M :: Float64)
+Calculate the Keperian angular velocity in cgs by giving the parameters in au and M⊙
+
+# Parameters
+- `r :: Float64`: The radius to the center of the system in au.
+- `M :: Float64`: The mass of the center star in M⊙
+
+# Returns
+- `Float64`: The Keperian angular velocity in cgs.
+"""
+function astrounit2KeperianAngularVelocity(r::Float64,M::Float64)
+    r_cgs = 14959787069100.0 * r
+    M_cgs =1.9891e33* M
+    G = 6.67e-8
+    Ω = sqrt((G*M_cgs)/r_cgs^3)
+    return Ω
+end

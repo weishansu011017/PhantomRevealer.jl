@@ -6,17 +6,15 @@ Growth rate estimation by using Chen & Lin(2020)(doi=10.3847/1538-4357/ab76ca)
 
 """
     growth_rate(;Κx :: Float64, 
-                Κz :: Float64,
-                St :: Float64,
-                cs :: Float64,
-                ρg :: Float64,
-                ρd :: Float64, 
-                vx :: Float64,
-                vy :: Float64,
-                vz :: Float64,
-                ωx :: Float64,
-                ωy :: Float64,
-                ωz :: Float64) :: Float64
+                     Κz :: Float64,
+                     St :: Float64,
+                     cs :: Float64,
+                     ρg :: Float64,
+                     ρd :: Float64, 
+                     vx :: Float64,
+                     vy :: Float64,
+                     ωx :: Float64,
+                     ωy :: Float64) :: Float64
 
 Estimation the growth rate of planetesimal with given conditions by using the method in Chen&Lin(2020)((doi=10.3847/1538-4357/ab76ca))
 
@@ -54,7 +52,6 @@ function growth_rate(;Κx :: Float64,
     invSt :: Float64 = 1/St
     εinvSt :: Float64 = ε * invSt
 
-
     M :: Matrix{ComplexF64} = zeros(ComplexF64,8,8)
 
     M[1,1] = A
@@ -79,7 +76,7 @@ function growth_rate(;Κx :: Float64,
     M[6,1] = Rx/ρd
     M[6,2] = εinvSt
     M[6,5] = (-im * (Κx * cs)/ρg) - (Rx/ρg)
-    M[6,6] = B - εinvSt
+    M[6,6] = B - εinvSt 
     M[6,7] = 2
 
     M[7,1] = Ry/ρd
@@ -91,12 +88,13 @@ function growth_rate(;Κx :: Float64,
     M[8,4] = εinvSt
     M[8,5] = -im * (Κz * cs)/ρg
     M[8,8] = εinvSt
-
-    σs :: Vector{ComplexF64} = eigvals(M)
-
-    ss :: Vector{Float64} = real(σs)
-
-    return maximum(ss)
+    try
+        σs :: Vector{ComplexF64} = eigvals(M)
+        ss :: Vector{Float64} = real(σs)
+        return maximum(ss)
+    catch
+        return NaN64
+    end
 end
 
 """
@@ -116,6 +114,7 @@ Allowed an vector entrence for Κx and Κz to estimate the growth rate.
 # Parameters
 - `Κx`: The dimentionless perturbation wavenumber along x-axis in the shearing box(radial axis)    (Κx = kx * Hg)
 - `Κz`: The dimentionless perturbation wavenumber along z-axis in the shearing box(vertical axis)  (Κz = kz * Hg)
+- `Ω` : The Keperian angular velocity
 - `St`: The Stokes number
 - `cs`: The sound speed                                                                            (cs = Ω * Hg)
 - `ρg`: The density of gaseous fluid in the midplane of the disk.
@@ -138,10 +137,10 @@ function growth_rate_vectors(;Κx :: AbstractVector,
                      vy :: Float64,
                      ωx :: Float64,
                      ωy :: Float64) :: Array
-    s = Array{Float64}(undef,length(Κx),length(Κz))
-    @threads for i in eachindex(Κx)
-        for j in eachindex(Κz)
-            s[i,j] = growth_rate(Κx=Κx[i],Κz=Κz[j],St=St,cs=cs,ρg=ρg,ρd=ρd,vx=vx,vy=vy,ωx=ωx,ωy=ωy)
+    s = Array{Float64}(undef,length(Κz),length(Κx))
+    @threads for i in eachindex(Κz)
+        for j in eachindex(Κx)
+            s[i,j] = growth_rate(Κx=Κx[j],Κz=Κz[i],St=St,cs=cs,ρg=ρg,ρd=ρd,vx=vx,vy=vy,ωx=ωx,ωy=ωy)
         end
     end
     return s
