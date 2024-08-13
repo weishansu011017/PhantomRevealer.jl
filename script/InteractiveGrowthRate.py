@@ -33,12 +33,10 @@ def growth_rate_calculation(data:PhantomRevealerAnalysisResult, s_index, phi_ind
     except KeyError:
         try:
             cs0 = msetup["cs0"]
-            if 'qfacdisc' in data.params:
-                msetup["q"] = data.params['qfacdisc']
-            q = msetup["q"]
         except KeyError:
             raise ValueError("Cannot determine the sound speed 'cs', Please assign in the 'msetup' as msetup['cs']")
         else:
+            q = data.params['qfacdisc']
             cs = locally_isothermal_sound_speed(s,q,cs0)
             cs_cgs = cs * uv
     ginput['cs'] = cs_cgs
@@ -48,13 +46,6 @@ def growth_rate_calculation(data:PhantomRevealerAnalysisResult, s_index, phi_ind
         if 'St' in column:
             ginput['St'] = data.data_dict[key][s_index,phi_index]
             break
-    if ginput['St'] is None:
-        Sigmag = data.data_dict[2][s_index,phi_index]
-        if 'grainsize' in data.params:
-            msetup['grainsize'] = data.params['grainsize']
-        if 'graindens' in data.params:
-            msetup['graindens'] = data.params['graindens']
-        ginput['St'] = (np.pi/2)*(msetup['grainsize']*msetup['graindens']/Sigmag)
     for key in column_indices.keys():
         ginput[key] = data.data_dict[column_indices[key]][s_index,phi_index]
         
@@ -102,8 +93,9 @@ def core(file:str,Polar_index:int) -> LcartRpolar_plot:
     Kz = np.logspace(0.0,4.0,101)
     
     colormap_L = "rainbow"
-    colormap_R = "hot"
+    colormap_R = "inferno"
     Polar_log = False
+    vlimr = None
     
     # Corresponding column indices
     rhog_index = 10
@@ -133,6 +125,7 @@ def core(file:str,Polar_index:int) -> LcartRpolar_plot:
     data.transfer_cgs()
     data.add_dust2gas_ratio()
     data.add_St()
+    data.add_vsub()
     s = data.axes[1]
     phi = data.axes[2]
     Polar_z = data.data_dict[Polar_index]
@@ -145,7 +138,7 @@ def core(file:str,Polar_index:int) -> LcartRpolar_plot:
     # Generate the window of figures 
     fax = LcartRpolar_plot(Kx,Kz,r"$k_{x}H$",r"$k_{z}H$", True, True,s,phi,r"$r$ [au]",r"$\phi$")
     fax.setup_fig((14,6))
-    fax.pcolor_draw(Polar_z,1,colormap_R,Polar_label,Polar_log,"",None,False)
+    fax.pcolor_draw(Polar_z,1,colormap_R,Polar_label,Polar_log,"",vlimr,False)
     fax.fig.canvas.mpl_connect('button_press_event',  lambda event: on_click(event, fax=fax, s=s, phi=phi, data=data,msetup=msetup, column_indices=column_indices,colormap_L=colormap_L))
     fax.draw_fig()
     return fax

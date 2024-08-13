@@ -68,6 +68,11 @@ class PhantomRevealerAnalysisResult:
             else:
                 self.time *= utime
                 self.params["time"] *= utime
+            for key in self.params.keys():
+                if 'Mass' in key:
+                    self.params[key] *= umass
+            self.params["grainsize"] *= udist
+            self.params["graindens"] *= urho
             column_unit = {}
             for key in self.column_names.keys():
                 column_name = self.column_names[key]
@@ -207,3 +212,41 @@ class PhantomRevealerAnalysisResult:
         self.column_names[column_index] = f"[{column_index}  St]"
         self.add_more_label(column_index,r"St")
         self.data_dict[column_index] = St
+        
+    def add_vsub(self, column_index = 63):
+        for column in self.column_names.values():
+            if "vsub" in column:
+                return
+        self.transfer_cgs()
+        vsg = None
+        vsd = None
+        vϕg = None
+        vϕd = None
+        vzg = None
+        vzd = None
+        for key in self.column_names.keys():
+            column = self.column_names[key]
+            if ("vs_g" in column) or ("vsm_g" in column):
+                vsg = self.data_dict[key]
+            elif ("vs_d" in column) or ("vsm_d" in column):
+                vsd = self.data_dict[key]
+            elif ("vϕ_g" in column) or ("vϕm_g" in column):
+                vϕg = self.data_dict[key]
+            elif ("vϕ_d" in column) or ("vϕm_d" in column):
+                vϕd = self.data_dict[key]
+            elif ("vz_g" in column) or ("vzm_g" in column):
+                vzg = self.data_dict[key]
+            elif ("vz_d" in column) or ("vzm_d" in column):
+                vzd = self.data_dict[key]
+        if (vsg is None) or (vsd is None) or (vϕg is None) or (vϕd is None):
+            raise KeyError("The velocity column has not been found!")
+        vs = np.abs(vsg-vsd)
+        vϕ = np.abs(vϕg-vϕd)
+        if (vzg is None) or (vzd is None):
+            vsub = np.sqrt(vs**2 + vϕ**2)
+        else:
+            vz = np.abs(vzg-vzd)
+            vsub = np.sqrt(vs**2 + vϕ**2 + vz**2)
+        self.column_names[column_index] = f"[{column_index} vsub]"
+        self.add_more_label(column_index,r"$| \mathbf{v}_g - \mathbf{v}_d |$")
+        self.data_dict[column_index] = vsub

@@ -595,7 +595,7 @@ class LcartRpolar_plot(figure_ax):
         
         ax = self.ax[ax_index]
         cont = ax.pcolor(*grids,image, cmap=colormap, norm=Norm)
-        ax.text(*cls.anato_text_position,anatonate_label, horizontalalignment='left',transform=ax.transAxes,c='white', fontsize=14, verticalalignment='top', bbox=cls.props)
+        ax.text(*cls.anato_text_position,anatonate_label, horizontalalignment='left',transform=ax.transAxes,c='white', fontsize=18, verticalalignment='top', bbox=cls.props)
         colorbar = self.setup_colorbar(cont,colorbar_ax_label=cax_label)
         colorbar.set_label(clabel)
         ax.set_xlim(xlim[0],xlim[1])

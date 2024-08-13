@@ -583,7 +583,61 @@ function add_St!(data::Analysis_result, column_index::Int64 = 62)
     grainsize = data.params["grainsize"]
     graindens = data.params["graindens"]
     St = (π/2)*(grainsize*graindens)./Sigmag
+    replace!(St, Inf=>NaN)
     data.column_names[column_index] = "[$column_index  St]"
     add_more_label!(data,column_index, L"St")
     data.data_dict[column_index] = St
+end
+
+"""
+    add_vsub!(data::Analysis_result, column_index::Int64 = 63)
+Add the column of subtraction of velocity between gas and dust.
+
+# Parameters
+- `data :: Analysis_result`: The data.
+- `column_index :: Int64 = 61`: The index of column.
+"""
+function add_vsub!(data::Analysis_result, column_index::Int64 = 63)
+    for column in values(data.column_names)
+        if occursin("vsub",column)
+            return
+        end
+    end
+    transfer_cgs!(data)
+    vsg = nothing
+    vsd = nothing
+    vϕg = nothing
+    vϕd = nothing
+    vzg = nothing
+    vzd = nothing
+    for key in keys(data.column_names)
+        column = data.column_names[key]
+        if occursin("vs_g",column) || occursin("vsm_g",column)
+            vsg = data.data_dict[key]
+        elseif occursin("vs_d",column) || occursin("vsm_d",column)
+            vsd = data.data_dict[key]
+        elseif occursin("vϕ_g",column) || occursin("vϕm_g",column)
+            vϕg = data.data_dict[key]
+        elseif occursin("vϕ_d",column) || occursin("vϕm_d",column)
+            vϕd = data.data_dict[key]
+        elseif occursin("vz_g",column) || occursin("vzm_g",column)
+            vzg = data.data_dict[key]
+        elseif occursin("vz_d",column) || occursin("vzm_d",column)
+            vzd = data.data_dict[key]
+        end
+    end
+    if isnothing(vsg) || isnothing(vsd) || isnothing(vϕg) || isnothing(vϕd)
+        error("MismatchingColumn: The velocity column has not been found!")
+    end
+    vs = abs.(vsg.-vsd)
+    vϕ = abs.(vϕg.-vϕd)
+    if (isnothing(vzg)) || (isnothing(vzd))
+        vsub = sqrt.(vs.^2 .+ vϕ.^2)
+    else
+        vz = abs.(vzg.-vzd)
+        vsub = sqrt.(vs.^2 .+ vϕ.^2 .+ vz.^2)
+    end
+    data.column_names[column_index] = "[$column_index v_sub]"
+    add_more_label!(data,column_index, L"| \mathbf{v}_g - \mathbf{v}_d |")
+    data.data_dict[column_index] = vsub
 end
