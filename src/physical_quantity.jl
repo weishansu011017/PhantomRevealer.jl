@@ -20,9 +20,6 @@ function add_necessary_quantity!(data::PhantomRevealerDataFrame)
     if !(hasproperty(data.dfdata, "rho"))
         add_rho!(data)
     end
-    if !(hasproperty(data.dfdata, "Sigma"))
-        add_Sigma!(data)
-    end
 end
 
 function _easy_estimate_h_intepolate(dfdata::DataFrame, rnorm::Vector)
@@ -426,6 +423,7 @@ Those points whose neighborhood has no particles around it would be label as `Na
 # Parameters
 - `data :: PhantomRevealerDataFrame`: The SPH data that is stored in `PhantomRevealerDataFrame`
 - `reference_point :: Vector`: The reference point for interpolation.
+- `Sigmai :: Float64`: The surface density in current location.
 - `column_names :: Vector{String}`: The quantities that would be interpolated.
 - `smoothed_kernal :: Function = M5_spline`: The Kernel function for interpolation.
 - `h_mode :: String="closest"`: The mode for finding a proper smoothed radius. (Allowed value: "closest", "mean")
@@ -448,6 +446,7 @@ quantities_dict :: Dict{Float64} = quantity_intepolate2D(data, reference_point, 
 function quantity_intepolate_2D(
     data::PhantomRevealerDataFrame,
     reference_point::Vector,
+    Sigmai::Float64,
     column_names::Vector{String},
     smoothed_kernal::Function = M5_spline,
     h_mode::String = "closest",
@@ -461,9 +460,6 @@ function quantity_intepolate_2D(
     "polar" = polar
     """
     working_column_names = deepcopy(column_names)
-    if !(hasproperty(data.dfdata, "Sigma"))
-        add_Sigma!(data)
-    end
     for column_name in column_names
         if !(hasproperty(data.dfdata, column_name))
             error("IntepolateError: No matching column '$(column_name)'.")
@@ -473,20 +469,7 @@ function quantity_intepolate_2D(
     if coordinate_flag == "polar"
         reference_point = _cylin2cart(reference_point)
     end
-    if get_dim(data) == 3
-        divided_column = "Sigma"
-    elseif get_dim(data) == 2
-        divided_column = "rho"
-    else
-        error("IntepolateError: The dimension of data is not supported to this function!")
-    end
 
-    if divided_column in working_column_names
-        rho_flag = true
-        deleteat!(working_column_names, findall(x->x==divided_column, working_column_names))
-    else
-        rho_flag = false
-    end
 
     quantity_result = Dict{String,Float64}()
     truncate_multiplier = KernelFunctionValid()[nameof(smoothed_kernal)]
@@ -505,11 +488,8 @@ function quantity_intepolate_2D(
         indices = findall(x -> x <= truncate_radius, snorm)
         filtered_dfdata = dfdata[indices, :]
         filtered_snorm = filter(r -> r <= truncate_radius, snorm)
-        if rho_flag
-            quantity_result[divided_column] = sum(particle_mass .* (Smoothed_kernel_function.(smoothed_kernal, h_intepolate, filtered_snorm,2)))
-        end
         for column_name in working_column_names
-            filtered_dfdata[!, column_name] ./= filtered_dfdata[!, divided_column]
+            filtered_dfdata[!, column_name] ./= Sigmai
             quantity_result[column_name] = sum(particle_mass .* (filtered_dfdata[!, column_name]) .* (Smoothed_kernel_function.(smoothed_kernal,h_intepolate,filtered_snorm,2)))
         end
     end

@@ -483,28 +483,6 @@ function add_rho!(data::PhantomRevealerDataFrame)
 end
 
 """
-    add_Sigma!(data::PhantomRevealerDataFrame)
-Add the local surface density of disk for each particles.
-If the simulation is in 2D, then calling the add_rho!().
-
-# Parameters
-- `data :: PhantomRevealerDataFrame`: The SPH data that is stored in `PhantomRevealerDataFrame` 
-"""
-function add_Sigma!(data::PhantomRevealerDataFrame)
-    d = get_dim(data)
-    if (d == 2)
-        add_rho!(data)
-        println(
-            "NotationConflictWarn: The add_Sigma! function is useless in this simulation, replace it to the add_rho!!",
-        )
-    elseif (d == 3)
-        particle_mass = data.params["mass"]
-        hfact = data.params["hfact"]
-        data.dfdata[!, "Sigma"] = particle_mass .* (hfact ./ data.dfdata[!, "h"]) .^ (2)
-    end
-end
-
-"""
     add_Kepelarian_azimuthal_velocity!(data::PhantomRevealerDataFrame)
 Add the Kepelarian azimuthal velocity for each particles.
 

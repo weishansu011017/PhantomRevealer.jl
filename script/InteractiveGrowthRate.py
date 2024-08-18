@@ -19,6 +19,14 @@ sys.path.insert(0, f'{PhantomRevealer_path}/script')
 from PhantomRevealerAnalysisResult import *
 from pyplot_backend import *
 
+def minimum_growth_rate(radius_au,M_solarmass,spiral_lifetime_yr=3000):
+    radius_SI = radius_au*149597870700
+    G_SI = 6.67e-11
+    M_SI = M_solarmass*1.9891e30
+    Q = 31556926
+    omega = np.sqrt(G_SI*M_SI)*(radius_SI**(-3/2))
+    return 2*np.pi/(omega*spiral_lifetime_yr*Q)
+
 def growth_rate_calculation(data:PhantomRevealerAnalysisResult, s_index, phi_index,msetup:dict,column_indices:dict):
     utime = data.params["utime"]
     udist = data.params["udist"]
@@ -72,14 +80,18 @@ def on_click(event,fax:LcartRpolar_plot,s:np.ndarray,phi:np.ndarray,data:Phantom
         s_click = event.ydata
         s_index = value2closestvalueindex(s,s_click)
         print(f"Clicked at phi: {phi_click}, r: {s_click}")
-        print(f"Closest index: ({phi_index},{s_index}), Value: ({phi[phi_index]},{s[s_index]})")
+        print(f"Closest index: ({phi_index},{s_index}), Value: ({phi[phi_index]},{s[s_index]})\n")
+        M_mass = data.params["Origin_sink_mass"]
+        tslt = 3000
+        minimum_growth_rate_per_omega = minimum_growth_rate(s[s_index],M_mass,tslt)
+        print(f"For a spiral with lifetime={tslt} yr, the growth rate at r={s[s_index]} needs to larger then s/Ω={minimum_growth_rate_per_omega}.\n")
         
         for child in fax.ax[1].get_children():
             if hasattr(child, 'get_label') and child.get_label() == marker_label:
                 child.remove()
                 
         growth_rate = growth_rate_calculation(data,s_index,phi_index,msetup,column_indices)
-        fax.ax[1].plot(phi[phi_index], s[s_index], 'o', color='lime', label=marker_label)
+        fax.ax[1].plot(phi[phi_index], s[s_index], 'o', color='r', label=marker_label)
         fax.clear_ax(0)
         fax.pcolor_draw(growth_rate,0,colormap_L,r"$s/\Omega$",True,"",[1e-4,1.0],False)
         fax.set_Lcart_label()
@@ -89,13 +101,13 @@ def on_click(event,fax:LcartRpolar_plot,s:np.ndarray,phi:np.ndarray,data:Phantom
 
 def core(file:str,Polar_index:int) -> LcartRpolar_plot: 
     # ----------------Parameters setting----------------
-    Kx = np.logspace(0.0,4.0,100)
-    Kz = np.logspace(0.0,4.0,101)
+    Kx = np.logspace(0.0,4.0,150)
+    Kz = np.logspace(0.0,4.0,151)
     
-    colormap_L = "rainbow"
-    colormap_R = "inferno"
+    colormap_L = "jet"
+    colormap_R = "binary"
     Polar_log = False
-    vlimr = None
+    vlimr = [0.0,1.0]
     
     # Corresponding column indices
     rhog_index = 10
@@ -134,20 +146,21 @@ def core(file:str,Polar_index:int) -> LcartRpolar_plot:
     if not isclose(phi[-1],2*np.pi):
         phi = np.hstack((phi,2*np.pi))
         Polar_z = np.column_stack((Polar_z,Polar_z[:,0]))
-    
+    time = int(round(data.time))
     # Generate the window of figures 
     fax = LcartRpolar_plot(Kx,Kz,r"$k_{x}H$",r"$k_{z}H$", True, True,s,phi,r"$r$ [au]",r"$\phi$")
     fax.setup_fig((14,6))
-    fax.pcolor_draw(Polar_z,1,colormap_R,Polar_label,Polar_log,"",vlimr,False)
+    fax.__class__.anato_text_position = [-0.02,1.00]
+    fax.pcolor_draw(Polar_z,1,colormap_R,Polar_label,Polar_log,f"t = {time} yr",vlimr,False)
     fax.fig.canvas.mpl_connect('button_press_event',  lambda event: on_click(event, fax=fax, s=s, phi=phi, data=data,msetup=msetup, column_indices=column_indices,colormap_L=colormap_L))
     fax.draw_fig()
     return fax
     
 def main(args) -> int:
     if args.latex:
-        rcParams_update(font_family='Times New Roman', font_size=13, text_usetex=True, text_latex_preamble=r"\usepackage{amsfonts}")
+        rcParams_update(font_family='Times New Roman', font_size=18, text_usetex=True, text_latex_preamble=r"\usepackage{amsfonts}")
     else:
-        rcParams_update(font_family='sans-serif', font_size=13, text_usetex=False, text_latex_preamble="")
+        rcParams_update(font_family='sans-serif', font_size=18, text_usetex=False, text_latex_preamble="")
     try:
         fax = core(args.filepath,args.polar)
         while plt.fignum_exists(fax.fig.number):

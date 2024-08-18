@@ -1,6 +1,7 @@
 import numpy as np
 import h5py
 import re
+import os
 
 def astrounit2KeperianAngularVelocity(r,M):
     r_cgs = 14959787069100.0 * r
@@ -68,9 +69,6 @@ class PhantomRevealerAnalysisResult:
             else:
                 self.time *= utime
                 self.params["time"] *= utime
-            for key in self.params.keys():
-                if 'Mass' in key:
-                    self.params[key] *= umass
             self.params["grainsize"] *= udist
             self.params["graindens"] *= urho
             column_unit = {}

@@ -8,11 +8,13 @@ Slice the disk for checking the edge-on vertical structure.
 """
 
 function Slicing_disk(file::String)
+    @info "-------------------------------------------------------"
     # ------------------------------PARAMETER SETTING------------------------------
     Analysis_tag :: String = "Slicing_disk"
     # General setting
     smoothed_kernel :: Function = M6_spline                              # Allowed function: M4_spline, M5_spline, M6_spline, C2_Wendland, C4_Wendland, C6_Wendland
     h_mode :: String = "closest"                                         # Allowed mode: "mean", "closest"
+    DiskMass_OuterRadius :: Float64 = 150.0                               # The outer radius of disk while estimating the mass of disk
 
     # Output setting
     File_prefix :: String = "Slice"
@@ -72,8 +74,8 @@ function Slicing_disk(file::String)
 
     # Get params
     params = Analysis_params_recording(datag, Analysis_tag)
-    diskg_mass = get_disk_mass(datag, sinks_data, smax, Origin_sinks_id)
-    diskd_mass = get_disk_mass(datad, sinks_data, smax, Origin_sinks_id)
+    diskg_mass = get_disk_mass(datag, sinks_data, DiskMass_OuterRadius , Origin_sinks_id)
+    diskd_mass = get_disk_mass(datad, sinks_data, DiskMass_OuterRadius , Origin_sinks_id)
     params["MassGaseousDisk"] = diskg_mass
     params["MassDustyDisk"] = diskd_mass
 

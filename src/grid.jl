@@ -10,12 +10,12 @@ The struct for storeing data and axes.
 
 # Fields
 - `grid :: Array`: A ndarray for storeing data.
-- `axes :: Vector{LinRange}`: The axes array for each dimension of grid.
+- `axes :: Vector{LinRange{Float64,Int64}}`: The axes array for each dimension of grid.
 - `dimension :: Vector{Int}`: The dimension of the grid (how much do the axes been separated.) e.g 3x3x4 matrix => [3,3,4]
 """
 struct gridbackend
     grid::Array
-    axes::Vector{LinRange}
+    axes::Vector{LinRange{Float64,Int64}}
     dimension::Vector{Int64}
 end
 
@@ -123,11 +123,11 @@ function generate_empty_grid(
 end
 
 """
-    generate_empty_grid(iaxes::Vector{LinRange}, type::Type = Float64)
+    generate_empty_grid(iaxes::Vector{LinRange{Float64,Int64}}, type::Type = Float64)
 Generate an 'gridbackend'
 
 # Parameters
-- `iaxes::Vector{LinRange}`: The `LinRange` array with each axes
+- `iaxes::Vector{LinRange{Float64,Int64}}`: The `LinRange` array with each axes
 - `type::Type = Float64`: Type of the data e.g. Float64
 
 # Returns
@@ -136,7 +136,7 @@ Generate an 'gridbackend'
 # Examples
 ```julia
 # Initialize iaxes
-iaxes = Vector{LinRange}(undef,2)
+iaxes = Vector{LinRange{Float64,Int64}}(undef,2)
 # Add axes
 iaxes[1] = LinRange(0.0,100.0,251)
 iaxes[2] = LinRange(0.0,2π,301)
@@ -144,7 +144,7 @@ iaxes[2] = LinRange(0.0,2π,301)
 grid :: gridbackend = generate_empty_grid(iaxes)
 ```
 """
-function generate_empty_grid(iaxes::Vector{LinRange}, type::Type = Float64)
+function generate_empty_grid(iaxes::Vector{LinRange{Float64,Int64}}, type::Type = Float64)
     dimension::Vector{Int64} = length.(iaxes)
     grid::Array = zeros(type, dimension...)
     return gridbackend(grid, iaxes, dimension)
@@ -347,11 +347,48 @@ function disk_3d_grid_generator(imin::Vector, imax::Vector, in::Vector)
         error("GridGeneratingError: Illegal input value.")
     end
     if (imax[2] > 2 * pi) || (imin[2] < 0)
-        error("GridGeneratingError: Illegal theta value.")
+        error("GridGeneratingError: Illegal phi value.")
     end
     if (imax[2] - imin[2]) == 2 * pi
         imax[2] -= (2 * pi / (in[2] + 1))
     end
     backend = generate_empty_grid(imin, imax, in)
     return backend
+end
+
+"""
+    func2gbe(imin::Vector, imax::Vector, in::Vector; func)
+Transfer the function into a gridbackend.
+
+# Parameters
+- `imin :: Vector`: The minimum value of grid e.g[rmin, ϕmin, zmin]
+- `imax :: Vector`: The maximum value of grid e.g[rmax, ϕmax, zmax]
+- `in :: Vector`: The numbers of separattion of grid e.g[rn, ϕn, zn]
+
+# Keyword arguments
+- `func`: The function that contain the information.
+
+# Returns
+- `gridbackend`: An 'gridbackend' that contain all of the axes information with data storage.
+"""
+function func2gbe(imin::Vector, imax::Vector, in::Vector; func)
+    if size(imin) == size(imax) == size(in)
+        nothing
+    else
+        error("GridGeneratingError: Illegal input value.")
+    end
+    if (imax[2] > 2 * pi) || (imin[2] < 0)
+        error("GridGeneratingError: Illegal phi value.")
+    end
+    if (imax[2] - imin[2]) == 2 * pi
+        imax[2] -= (2 * pi / (in[2] + 1))
+    end
+    iLinRange = Vector{LinRange{Float64,Int64}}(undef,length(in))
+    for i in eachindex(in)
+        iLinRange[i] = LinRange(imin[i],imax[i],in[i])
+    end
+    meshgrids = meshgrid(iLinRange...)
+    grid :: Array = Array{Float64}(undef,in...)
+    grid = func.(meshgrids...)
+    return gridbackend(grid,iLinRange,in)
 end

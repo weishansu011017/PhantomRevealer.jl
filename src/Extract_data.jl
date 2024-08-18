@@ -11,14 +11,14 @@ The structure that contains all of the analysis result but not prepare for extra
 # Fields
 - `time :: Float64`: The timestamp of simulation.
 - `data_dict :: Dict{Int, gridbackend}`: The dictionary that contains all of the data.
-- `axes :: Vector{LinRange}`: The axes of grid.
+- `axes :: Vector{LinRange{Float64,Int64}}`: The axes of grid.
 - `column_names :: Dict{Int,String}`: The column name of each data.
 - `params :: Dict{String, Any}`: Other information of analysis/simulation.
 """
 struct Analysis_result_buffer <: PhantomRevealerDataStructures
     time::Float64
     data_dict::Dict{Int,gridbackend}
-    axes::Vector{LinRange}
+    axes::Vector{LinRange{Float64,Int64}}
     column_names::Dict{Int,String}
     params::Dict{String,Any}
 end
@@ -74,7 +74,7 @@ function convert_field(value)
             converted_value[key] = value[key].grid
         end
         return converted_value
-    elseif typeof(value) <: Vector{LinRange}
+    elseif typeof(value) <: Vector{LinRange{Float64,Int64}}
         converted_value = Dict{Int,Vector{Float64}}()
         for i in eachindex(value)
             converted_value[i] = collect(value[i])
@@ -105,7 +105,7 @@ println(column_names)  # Print out: ["phi", "rho_g", "rho_d", "vs_g", "vs_d", "v
 ```
 """
 function create_column_names(keys_order::Vector{String}, suffixes::Vector)
-    column_names = ["phi"]
+    column_names = ["midz"]
     for key in keys_order
         for suffix in suffixes
             push!(column_names, string(key, "_", suffix))
@@ -129,9 +129,9 @@ Create the dictionary of column names in the `[0X     NAME]`-alike format.
 keys = ["rho", "vs", "vϕ", "vz", "e"]
 suffixes = ["g", "d"]
 column_names = create_column_names(keys, suffixes)
-println(column_names)  # Print out: ["phi", "rho_g", "rho_d", "vs_g", "vs_d", "vϕ_g", "vϕ_d", "vz_g", "vz_d", "e_g", "e_d"]
+println(column_names)  # Print out: ["midz", "rho_g", "rho_d", "vs_g", "vs_d", "vϕ_g", "vϕ_d", "vz_g", "vz_d", "e_g", "e_d"]
 column_dict = create_column_dict(column_names)
-println(values(column_dict))  # Print out(non-ordered): ["[05        vs_d]", "[08        vz_g]", "[01         phi]", "[06        vϕ_g]", "[11         e_d]", "[09        vz_d]", "[03       rho_d]", "[07        vϕ_d]", "[04        vs_g]", "[02       rho_g]", "[10         e_g]"]
+println(values(column_dict))  # Print out(non-ordered): ["[05        vs_d]", "[08        vz_g]", "[01         midz]", "[06        vϕ_g]", "[11         e_d]", "[09        vz_d]", "[03       rho_d]", "[07        vϕ_d]", "[04        vs_g]", "[02       rho_g]", "[10         e_g]"]
 ```
 """
 function create_column_dict(column_names::Array{String})
@@ -182,6 +182,8 @@ Construct a `Analysis_result_buffer` structure with different suffixes
 - `time :: Float64`: The timestamp of simulation.
 - `grids_dict :: AbstractDict{String, Dict{String, gridbackend}}`: The dictionary that contains the analysis results in the format of `gridbackend` which is stored in the dictionaries. The keys would be the suffix of column names. 
 - `keys_array :: Vector{String}`: The name of quantities for each column.
+- `params :: Dict{String,Any}`: The dictionary of parameters.
+- `midz_gbe::Union{Nothing,gridbackend} = nothing`: The midplane of the disk.
 
 # Returns
 - `Analysis_result_buffer`: The analysis data.
@@ -191,6 +193,7 @@ function Analysis_result_buffer(
     grids_dict::AbstractDict{String,Dict{String,gridbackend}},
     keys_array::Vector{String},
     params::Dict{String,Any},
+    midz_gbe::Union{Nothing,gridbackend} = nothing
 )
     function add_suffix_to_keys!(dict::Dict, suffix::String)
         new_dict = Dict{String,Any}()
@@ -231,8 +234,12 @@ function Analysis_result_buffer(
     data_dict = Dict{Int,gridbackend}()
     for i in eachindex(column_names)
         column = column_names[i]
-        if column == "phi"
-            continue
+        if column == "midz"
+            if isnothing(midz_gbe)
+                continue
+            else
+                data_dict[i] = midz_gbe
+            end
         end
         for suffix in suffixes
             if haskey(prepare_dict[suffix], column)
@@ -255,8 +262,10 @@ function axes_self_check(input::Analysis_result_buffer)
     iaxes = input.axes
     for key in keys(input.column_names)
         column = input.column_names[key]
-        if occursin("phi", column)
-            continue
+        if occursin("midz", column)
+            if !(haskey(input_data,column))
+                continue
+            end
         end
         if typeof(input_data[key]) <: gridbackend
             axes = input_data[key].axes

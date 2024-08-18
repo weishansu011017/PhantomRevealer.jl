@@ -29,7 +29,7 @@ def check_latex_installed():
     except (subprocess.CalledProcessError, FileNotFoundError):
         return False
 
-def rcParams_update(font_family='Times New Roman', font_size=13, text_usetex=True, text_latex_preamble=r"\usepackage{amsfonts}"):
+def rcParams_update(font_family='Times New Roman', font_size=13, text_usetex=True, text_latex_preamble=r"\usepackage{amsfonts}", savefig_dpi=450,savefig_format="eps"):
     '''
     Update the font setting
     '''
@@ -37,7 +37,9 @@ def rcParams_update(font_family='Times New Roman', font_size=13, text_usetex=Tru
     "font.family": font_family,
     "font.size": font_size,
     "text.usetex": text_usetex,
-    "text.latex.preamble": text_latex_preamble
+    "text.latex.preamble": text_latex_preamble,
+    "savefig.dpi": savefig_dpi,
+    "savefig.format": savefig_format
 })
     
 def Current_rcParams():
@@ -144,6 +146,8 @@ class figure_ax:
         Two kinds of projection
         "None": Normal cartisian plotting
         "polar": Polar plotting
+        "3d": 3D plotting
+        ""
         '''
         self.fig: mfg.Figure = None
         self.ax = None
@@ -203,12 +207,14 @@ class figure_ax:
                         ax.set_yticklabels([])  
                         ax.xaxis.set_visible(False)  
                         ax.yaxis.set_visible(False)
-                    else:
+                    elif projection is None:
                         if c != 0:  
                             plt.setp(ax.get_yticklabels(), visible=False)
                         
                         if r != nrows - 1:  
                             plt.setp(ax.get_xticklabels(), visible=False)
+                    elif projection == '3d':
+                        pass
                         
 
             self.ax = ax_list[0] if (ncols == 1 and nrows == 1) else ax_list
@@ -222,6 +228,49 @@ class figure_ax:
             return 1
         else:
             return len(self.ax)
+    
+    def is_same_column(self,axid1, axid2):
+        ncols = self.ncols
+        if axid1%ncols == axid2%ncols:
+            return True
+        else:
+            return False
+        
+    def is_same_row(self,axid1,axid2):
+        ncols = self.ncols
+        if axid1//ncols == axid2//ncols:
+            return True
+        else:
+            return False
+    
+    def setup_colorbar_ax(self, axids=0, colorbar_ax_label=None, fraction=0.05, pad=0.04):
+        if colorbar_ax_label is None:
+            colorbar_ax_label = f"<colorbarAX>"
+            print(f"The label of new axis of colobar is set to be {colorbar_ax_label}. The spcified label would be recommand.")
+        if self.get_number_of_ax() == 1:
+            print("The function 'setup_colorbar_ax()' only valid for the multiplot. For a single plot, you won't need this function.")
+            return
+        if isinstance(axids,list):
+            for i in range(len(axids)-1):
+                axid1 = axids[i]
+                axid2 = axids[i+1]
+                if not (self.is_same_column(axid1,axid2)):
+                    raise IndexError("All of the axes should be located on the same column!")
+        else:
+            axids = [axids]
+        fig = self.fig
+        ax = self.ax
+        top_ax_pos = ax[axids[0]].get_position().bounds
+        bottom_ax_pos = ax[axids[-1]].get_position().bounds
+        colorbar_height = top_ax_pos[1] + top_ax_pos[3] - bottom_ax_pos[1]
+        if colorbar_height <= 0:
+            raise ValueError("Calculated colorbar height is non-positive. Check the subplot ordering.")
+        colorbar_width = top_ax_pos[2] * fraction
+        colorbar_left = top_ax_pos[0] + top_ax_pos[2] + pad
+        colorbar_bottom = bottom_ax_pos[1]
+        colorbar_ax = fig.add_axes([colorbar_left, colorbar_bottom, colorbar_width, colorbar_height])
+        colorbar_ax.set_label(colorbar_ax_label)
+        return colorbar_ax
             
     def setup_colorbar(self,cont,colorbar_ax_label = None):
         ''' Setup the colobar for the specific heatmap.
@@ -278,6 +327,22 @@ class figure_ax:
         figsize = tuple(self.fig.get_size_inches())
         self.close_fig()
         self.setup_fig(nrows,ncols,figsize)
+        
+    def reordered_legend(self, axid=0,ncol=2,order=[0, 2, 4, 6, 1, 3, 5, 7],loc='best'):
+        if isinstance(self.ax,list):
+            ax = self.ax[axid]
+        else:
+            ax = self.ax
+        handles, labels = ax.get_legend_handles_labels()
+        if (not len(handles)==len(order)):
+            return
+        else:
+            handles = [handles[i] for i in order]
+            labels = [labels[i] for i in order]
+            if ax.get_legend() is None:
+                ax.legend()
+            ax.get_legend().remove()
+            ax.legend(handles, labels,loc=loc, ncol=ncol)
             
 class two_axes_plot(figure_ax):
     props = dict(boxstyle='round', facecolor='black')
@@ -366,7 +431,7 @@ class two_axes_plot(figure_ax):
             else:
                 if isinstance(ax, list):
                     cont = ax[i].pcolor(X,Y,image, cmap=colormaps[j], norm=Norms[j])
-                    ax[i].text(*cls.anato_text_position,anatonate_labels[k], horizontalalignment='left',transform=ax[i].transAxes,c='white', fontsize=14, verticalalignment='top', bbox=cls.props)
+                    ax[i].text(*cls.anato_text_position,anatonate_labels[k], horizontalalignment='left',transform=ax[i].transAxes,c='white', fontsize=plt.rcParams["font.size"], verticalalignment='top', bbox=cls.props)
                     if i in colorbar_pos_indies:
                         colorbar = self.setup_colorbar(cont,colorbar_ax_label=cax_label[j])
                         colorbar.set_label(clabels[j])
@@ -376,7 +441,7 @@ class two_axes_plot(figure_ax):
                     ax[i].set_rasterized(True)
                 else:
                     cont = ax.pcolor(X,Y,image, cmap=colormaps[0], norm=Norms[0])
-                    ax.text(*cls.anato_text_position,anatonate_labels[0], horizontalalignment='left', transform=ax.transAxes,c='white', fontsize=14, verticalalignment='top', bbox=cls.props)
+                    ax.text(*cls.anato_text_position,anatonate_labels[0], horizontalalignment='left', transform=ax.transAxes,c='white', fontsize=plt.rcParams["font.size"], verticalalignment='top', bbox=cls.props)
                     colorbar = self.setup_colorbar(cont,colorbar_ax_label=cax_label[0])
                     colorbar.set_label(clabels[0])
                     ax.set_xlim(xlim[0],xlim[1])
@@ -595,7 +660,7 @@ class LcartRpolar_plot(figure_ax):
         
         ax = self.ax[ax_index]
         cont = ax.pcolor(*grids,image, cmap=colormap, norm=Norm)
-        ax.text(*cls.anato_text_position,anatonate_label, horizontalalignment='left',transform=ax.transAxes,c='white', fontsize=18, verticalalignment='top', bbox=cls.props)
+        ax.text(*cls.anato_text_position,anatonate_label, horizontalalignment='left',transform=ax.transAxes,c='white', fontsize=plt.rcParams["font.size"], verticalalignment='top', bbox=cls.props)
         colorbar = self.setup_colorbar(cont,colorbar_ax_label=cax_label)
         colorbar.set_label(clabel)
         ax.set_xlim(xlim[0],xlim[1])
@@ -610,4 +675,4 @@ class LcartRpolar_plot(figure_ax):
         ax.set_rasterized(True)
         if draw:
             self.draw_fig()
-        
+
