@@ -68,6 +68,7 @@ function Constructing_figure(filepath::String)
     # Preparing plotting backend
     prplt = initialize_pyplot_backend()
     fax = prplt.cart_plot(s, z, slabel, zlabel)
+    fax.__class__.anato_text_position = [0.01,0.98]
     fax.setup_fig(2,1,figsize)
 
     fax.pcolor_draw([rhog,rhod], colormaps, clabels,[1,1],[latexstring(L"$t = ",Int64(round(timestamp)), L"$ yr")], clims, false)
