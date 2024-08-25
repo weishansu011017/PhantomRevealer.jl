@@ -709,7 +709,7 @@ function rotate_to_disk_L!(
 end
 
 """
-    add_eccentricity!(data::PhantomRevealerDataFrame,sink_data::PhantomRevealerDataFrame)
+    add_eccentricity!(data::PhantomRevealerDataFrame)
 Add the eccentricity for each particle with respect to current origin.
 
 # Parameters

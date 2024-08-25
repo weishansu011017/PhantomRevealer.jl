@@ -86,12 +86,13 @@ function convert_field(value)
 end
 
 """
-    create_column_names(keys_order::Vector{String}, suffixes::Vector)
+    create_column_names(keys_order::Vector{String}, suffixes::Vector, midz::Bool = true)
 Create the array of column names in a interleaved order.
 
 # Parameters
 - `keys_order :: Vector{String}`: The sorted keys for all column.
 - `suffixes :: Vector`: The suffixes of keys.
+- `midz :: Bool = true`: Determine whether the first column midz should be involved.
 
 # Returns
 - `Vector`: The array of column names.
@@ -104,8 +105,12 @@ column_names = create_column_names(keys, suffixes)
 println(column_names)  # Print out: ["phi", "rho_g", "rho_d", "vs_g", "vs_d", "vϕ_g", "vϕ_d", "vz_g", "vz_d", "e_g", "e_d"]
 ```
 """
-function create_column_names(keys_order::Vector{String}, suffixes::Vector)
-    column_names = ["midz"]
+function create_column_names(keys_order::Vector{String}, suffixes::Vector, midz::Bool = true)
+    if midz
+        column_names = ["midz"]
+    else
+        column_names = Array{String}()
+    end
     for key in keys_order
         for suffix in suffixes
             push!(column_names, string(key, "_", suffix))
@@ -318,7 +323,11 @@ function Write_HDF5(
         end
     end
     numberfile = extract_number(RawData_filename)
-    output_filename = data_prefix * "_" * numberfile * ".h5"
+    if numberfile == ""
+        output_filename = data_prefix * ".h5"
+    else
+        output_filename = data_prefix * "_" * numberfile * ".h5"
+    end
     h5open(output_filename, "w") do f
         for name in fieldnames(Analysis_result)
             val = getfield(data, name)

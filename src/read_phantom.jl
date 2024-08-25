@@ -277,7 +277,7 @@ function read_phantom(
             params = merge(header_vars, Dict("mass" => header_vars["massoftype"]))
             df = PhantomRevealerDataFrame(df, params)
             df_sinks = PhantomRevealerDataFrame(df_sinks, header_vars)
-            return df, df_sinks
+            return [df, df_sinks]
         end
         combined_df = vcat(df, df_sinks, cols = :union)
         params = merge(header_vars, Dict("mass" => header_vars["massoftype"]))
