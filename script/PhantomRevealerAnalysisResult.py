@@ -78,8 +78,17 @@ class PhantomRevealerAnalysisResult:
                 
                 if ("sigma" in column_name) or ("Sigma" in column_name):
                     self.data_dict[key] *= usigma
-                    header = r"$\Sigma_"
-                    unit = r"$ [g cm$^{-2}$]"
+                    if "s_" in column_name:
+                        header = r"$\Sigma_{s,"
+                        suffix = suffix + r"}"
+                        unit = r"$ [g cm$^{-2}$]"
+                    elif "ϕ_" in column_name:
+                        header = r"$\Sigma_{\phi,"
+                        suffix = suffix + r"}"
+                        unit = r"$ [g cm$^{-2}$]"
+                    else:
+                        header = r"$\Sigma_"
+                        unit = r"$ [g cm$^{-2}$]"
                 elif "rho" in column_name:
                     self.data_dict[key] *= urho
                     header = r"$\rho_"

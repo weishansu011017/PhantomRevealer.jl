@@ -25,7 +25,7 @@ def minimum_growth_rate(radius_au,M_solarmass,spiral_lifetime_yr=3000):
     M_SI = M_solarmass*1.9891e30
     Q = 31556926
     omega = np.sqrt(G_SI*M_SI)*(radius_SI**(-3/2))
-    return 2*np.pi/(omega*spiral_lifetime_yr*Q)
+    return 1/(omega*spiral_lifetime_yr*Q)
 
 def growth_rate_calculation(data:PhantomRevealerAnalysisResult, s_index, phi_index,msetup:dict,column_indices:dict):
     utime = data.params["utime"]
@@ -56,14 +56,13 @@ def growth_rate_calculation(data:PhantomRevealerAnalysisResult, s_index, phi_ind
             break
     for key in column_indices.keys():
         ginput[key] = data.data_dict[column_indices[key]][s_index,phi_index]
-        
-    print("Input parameters:")
-    print(ginput)
-    
+    ginput['vx'] /= cs_cgs
+    ginput['vy'] /= cs_cgs
+    ginput['ωx'] /= cs_cgs
+    ginput['ωy'] /= cs_cgs
     growth_rate = PhantomRevealer.growth_rate_vectors(Κx=msetup['Kx'],
                                     Κz=msetup['Kz'],
                                     St=ginput['St'],
-                                    cs=ginput['cs'],
                                     ρg=ginput['ρg'],
                                     ρd=ginput['ρd'],
                                     vx=ginput['vx'],
@@ -93,13 +92,27 @@ def on_click(event,fax:LcartRpolar_plot,s:np.ndarray,phi:np.ndarray,data:Phantom
         growth_rate = growth_rate_calculation(data,s_index,phi_index,msetup,column_indices)
         fax.ax[1].plot(phi[phi_index], s[s_index], 'o', color='r', label=marker_label)
         fax.clear_ax(0)
-        fax.pcolor_draw(growth_rate,0,colormap_L,r"$s/\Omega$",True,"",[1e-4,1.0],False)
+        fax.pcolor_draw(growth_rate,0,colormap_L,r"$s/\Omega$",True,"",[1e-4,0.1],False)
         fax.set_Lcart_label()
         fax.set_Lcart_scale('log')
         fax.fig.canvas.flush_events()
     return 0
 
 def core(file:str,Polar_index:int) -> LcartRpolar_plot: 
+    def on_switch(event):
+        nonlocal j
+        if event.key in 'ad':
+            if event.key == 'a':
+                j -= 1
+            elif event.key == 'd':
+                j += 1
+            Polar_z = data.data_dict[Polar_indices[(Polar_Iindex+j)%len(Polar_indices)]]
+            Polar_label = data.params["column_units"][Polar_indices[(Polar_Iindex+j)%len(Polar_indices)]]
+            Polar_z = np.column_stack((Polar_z,Polar_z[:,0]))
+            
+            fax.clear_ax(1)
+            fax.pcolor_draw(Polar_z,1,colormap_R,Polar_label,Polar_log,f"t = {time} yr",vlimr,False)
+            fax.fig.canvas.flush_events()
     # ----------------Parameters setting----------------
     Kx = np.logspace(0.0,4.0,150)
     Kz = np.logspace(0.0,4.0,151)
@@ -107,7 +120,7 @@ def core(file:str,Polar_index:int) -> LcartRpolar_plot:
     colormap_L = "jet"
     colormap_R = "binary"
     Polar_log = False
-    vlimr = [0.0,1.0]
+    vlimr = None
     
     # Corresponding column indices
     rhog_index = 10
@@ -131,17 +144,21 @@ def core(file:str,Polar_index:int) -> LcartRpolar_plot:
     column_indices["ωx"] = omegax_index
     column_indices["ωy"] = omegay_index
     
+    j = 0
+    
     data = PhantomRevealerAnalysisResult.Read_HDF5(filepath=file)
     if not data.params["Analysis_type"] == 'Faceon_disk':
-        raise AssertionError(f"The input file should have the analysis tag with 'Faceon_disk' rather then {data.params["Analysis_type"]}")
+        raise LookupError(f"The input file should have the analysis tag with 'Faceon_disk' rather then {data.params["Analysis_type"]}")
     data.transfer_cgs()
     data.add_dust2gas_ratio()
     data.add_St()
     data.add_vsub()
+    Polar_indices = sorted(list(data.data_dict.keys()))
+    Polar_Iindex = value2closestvalueindex(Polar_indices,Polar_index)
     s = data.axes[1]
     phi = data.axes[2]
-    Polar_z = data.data_dict[Polar_index]
-    Polar_label = data.params["column_units"][Polar_index]
+    Polar_z = data.data_dict[Polar_indices[(Polar_Iindex+j)%len(Polar_indices)]]
+    Polar_label = data.params["column_units"][Polar_indices[(Polar_Iindex+j)%len(Polar_indices)]]
     
     if not isclose(phi[-1],2*np.pi):
         phi = np.hstack((phi,2*np.pi))
@@ -153,6 +170,7 @@ def core(file:str,Polar_index:int) -> LcartRpolar_plot:
     fax.__class__.anato_text_position = [-0.02,1.00]
     fax.pcolor_draw(Polar_z,1,colormap_R,Polar_label,Polar_log,f"t = {time} yr",vlimr,False)
     fax.fig.canvas.mpl_connect('button_press_event',  lambda event: on_click(event, fax=fax, s=s, phi=phi, data=data,msetup=msetup, column_indices=column_indices,colormap_L=colormap_L))
+    fax.fig.canvas.mpl_connect('key_press_event',  on_switch)
     fax.draw_fig()
     return fax
     

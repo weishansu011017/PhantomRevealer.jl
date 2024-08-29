@@ -472,8 +472,19 @@ function transfer_cgs!(data::Analysis_result, year::Bool = true)
 
             if occursin("sigma", column_name) || occursin("Sigma", column_name)
                 data.data_dict[key] *= usigma
-                header = LaTeXString(L"$\Sigma_")
-                unit = LaTeXString(L"$ [g cm$^{-2}$]")
+                if occursin("s_", column_name)
+                    header = LaTeXString(L"$\Sigma_{s,")
+                    suffix = LaTeXString(suffix* "}")
+                    unit = LaTeXString(L"$ [g cm$^{-2}$]")
+                elseif occursin("ϕ_", column_name)
+                    header = LaTeXString(L"$\Sigma_{\phi,")
+                    suffix = LaTeXString(suffix* "}")
+                    unit = LaTeXString(L"$ [g cm$^{-2}$]")
+                else
+                    header = LaTeXString(L"$\Sigma_")
+                    unit = LaTeXString(L"$ [g cm$^{-2}$]")
+                end
+                
             elseif occursin("rho", column_name)
                 data.data_dict[key] *= urho
                 header = LaTeXString(L"$\rho_")

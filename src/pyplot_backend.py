@@ -671,8 +671,9 @@ class LcartRpolar_plot(figure_ax):
             ax.set_yscale('log')
         if (ax_index == 1):
             ax.set_rmin(-1)
-            
-        ax.set_rasterized(True)
+        
+        if ax_index == 0: 
+            ax.set_rasterized(True)
         if draw:
             self.draw_fig()
 
