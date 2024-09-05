@@ -44,6 +44,7 @@ Draw the face-on polar plot from the Faceon data.
 
 # Keyword argument
 - `fax :: Union{PyObject, Nothing} = nothing`: The existing object of canvas. If `nothing` will generate a new object.
+- `time_unit :: String = "yr"`: The unit of time.
 
 # Returns
 - `PyCall.PyObject <pyplot_backend.polar_plot>`: The object of plotting.
@@ -56,7 +57,7 @@ fax = Faceon_polar_plot(data, 2)
 fax = Faceon_polar_plot(fax=fax, data, 3)
 ````
 """
-function Faceon_polar_plot(Disk2Ddata :: Analysis_result, array_index :: Int64,Log_flag::Bool=false, vlim :: Union{Nothing,Vector} = nothing,colormap::String="plasma", figzise :: Tuple = (8,6);fax::Union{PyObject, Nothing} =nothing)
+function Faceon_polar_plot(Disk2Ddata :: Analysis_result, array_index :: Int64,Log_flag::Bool=false, vlim :: Union{Nothing,Vector} = nothing,colormap::String="plasma", figzise :: Tuple = (8,6);fax::Union{PyObject, Nothing} =nothing, time_unit::String = "yr")
     if Disk2Ddata.params["Analysis_type"] != "Faceon_disk"
         error("InputError: The Analysis type of data needs to be `Faceon_disk`!")
     end
@@ -68,7 +69,7 @@ function Faceon_polar_plot(Disk2Ddata :: Analysis_result, array_index :: Int64,L
     z = Disk2Ddata.data_dict[array_index]
     z_unit = Disk2Ddata.params["column_units"][array_index]
     time = Disk2Ddata.time
-    label_left = latexstring(L"$t = ",Int64(round(time)), L"$")
+    label_left = latexstring(L"$t = ",Int64(round(time)), L"$", time_unit)
     label_right = replace_trans_LaTeXStr(Disk2Ddata.column_names[array_index])
 
     if ϕ[end] != 2π

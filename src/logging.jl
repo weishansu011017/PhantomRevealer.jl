@@ -145,7 +145,7 @@ end
 Generate a file identifier string.
 
 # Parameters
-- `Analysis_type::String`: Costom analysis name.
+- `Analysis_type::String`: Custom analysis name.
 
 # Returns
 - `String`: The file identifier string.

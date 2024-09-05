@@ -777,22 +777,19 @@ function get_disk_mass(
 end
 
 """
-    Analysis_params_recording(data::PhantomRevealerDataFrame, Analysis_type::String)
+    Analysis_params_recording(data::PhantomRevealerDataFrame)
 Generate the dictionary for recording the basic properties of dumpfile.
 
 # Parameters
 - `data :: PhantomRevealerDataFrame`: The SPH data that is stored in `PhantomRevealerDataFrame`
-- `Analysis_type :: String`: The name of analysis.
 
 # Returns
 - `Dict{String, Any}`: The dictionary of parameters.
 """
-function Analysis_params_recording(data::PhantomRevealerDataFrame, Analysis_type::String)
+function Analysis_params_recording(data::PhantomRevealerDataFrame)
     params = Dict{String,Any}()
     data_params = data.params
     params["time"] = get_time(data)
-    params["file_identifier"] = file_identifier(Analysis_type)
-    params["Analysis_type"] = Analysis_type
     params["Origin_sink_id"] = data_params["Origin_sink_id"]
     params["Origin_sink_mass"] = data_params["Origin_sink_mass"]
     params["grainsize"] = data_params["grainsize"]

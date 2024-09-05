@@ -47,6 +47,8 @@ def growth_rate_calculation(data:PhantomRevealerAnalysisResult, s_index, phi_ind
             q = data.params['qfacdisc']
             cs = locally_isothermal_sound_speed(s,q,cs0)
             cs_cgs = cs * uv
+    else:
+        cs_cgs = cs
     ginput['cs'] = cs_cgs
     ginput['St'] = None
     for key in data.column_names.keys():

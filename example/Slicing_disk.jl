@@ -73,7 +73,7 @@ function Slicing_disk(file::String)
     time = get_time(datag)
 
     # Get params
-    params = Analysis_params_recording(datag, Analysis_tag)
+    params = Analysis_params_recording(datag)
     diskg_mass = get_disk_mass(datag, sinks_data, DiskMass_OuterRadius , Origin_sinks_id)
     diskd_mass = get_disk_mass(datad, sinks_data, DiskMass_OuterRadius , Origin_sinks_id)
     params["MassGaseousDisk"] = diskg_mass
@@ -96,7 +96,7 @@ function Slicing_disk(file::String)
 
     # Write the file to HDF5
     if HDF5
-        Write_HDF5(file, Result, File_prefix)
+        Write_HDF5(Analysis_tag,file, Result, File_prefix)
     end
 
     # Construct the figure

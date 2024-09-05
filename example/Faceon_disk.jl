@@ -51,7 +51,7 @@ function Disk_Faceon_interpolation(filepath :: String)
     
     # Make the `params` field
     time :: Float64 = get_time(datag)
-    params :: Dict{String, Any} = Analysis_params_recording(datag, Analysis_tag)
+    params :: Dict{String, Any} = Analysis_params_recording(datag)
     params["GasDiskMass"] = get_disk_mass(datag, sinks_data, DiskMass_OuterRadius, Origin_sinks_id)
     params["DustDiskMass"] = get_disk_mass(datad, sinks_data, DiskMass_OuterRadius, Origin_sinks_id)
     
@@ -76,7 +76,7 @@ function Disk_Faceon_interpolation(filepath :: String)
     Result :: Analysis_result = buffer2output(Result_buffer)
     
     # Write out the result to HDF5
-    Write_HDF5(filepath, Result, File_prefix)
+    Write_HDF5(Analysis_tag,filepath, Result, File_prefix)
     @info "-------------------------------------------------------"
 end
 

@@ -21,6 +21,7 @@ include("$_module_location/Grid_interpolation.jl")
 include("$_module_location/Extract_data.jl")
 include("$_module_location/result_toolkits.jl")
 include("$_module_location/growth_rate.jl")
+include("$_module_location/spiral_detection.jl")
 
 # Initialize function
 """
@@ -45,12 +46,11 @@ end
 
 function initialize_modules()
     for mod in _MODULE_LIST
-        if mod in [:Sys, :Threads]
-            Base.eval(Main, :(using Base.$(Symbol(mod))))
-        else
-            Base.eval(Main, :(using $(Symbol(mod))))
-        end
+        Base.eval(Main, :(using $(Symbol(mod))))
     end
+    Base.eval(Main, :(using Base.Sys))
+    Base.eval(Main, :(using Base.Threads))
+    Base.eval(Main, :(using Base.Iterators))
 end
 
 # Import Python plt backend

@@ -5,7 +5,9 @@ const _MODULE_LIST = [
     :DataStructures,
     :Dates,
     :FilesystemDatastructures,
+    :ForwardDiff,
     :HDF5,
+    :ImageFiltering,
     :Interpolations,
     :LaTeXStrings,
     :LinearAlgebra,
@@ -20,13 +22,10 @@ const _MODULE_LIST = [
     :Statistics,
     :StatsPlots,
     :StatsBase,
-    :Sys,
-    :Threads,
 ]
 for mod in _MODULE_LIST
-    if mod in [:Sys, :Threads]
-        @eval using Base.$(Symbol(mod))
-    else
-        @eval using $(Symbol(mod))
-    end
+    @eval using $(Symbol(mod))
 end
+@eval using Base.Sys
+@eval using Base.Threads
+@eval using Base.Iterators
