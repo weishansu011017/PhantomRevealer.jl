@@ -165,6 +165,7 @@ function gradient_density(
     "polar" = polar
     """
     if coordinate_flag == "polar"
+        ϕ =  reference_point[2]
         reference_point = _cylin2cart(reference_point)
     end
     truncate_multiplier = KernelFunctionValid()[nameof(smoothed_kernal)]
@@ -193,7 +194,12 @@ function gradient_density(
         end
 
         if coordinate_flag == "polar"
-            cylindrical_grad_density = _cart2cylin(grad_density)
+            cosϕ = cos(ϕ)
+            sinϕ = sin(ϕ)
+            cylindrical_grad_density :: Vector = Vector{Float64}(undef, 3)
+            cylindrical_grad_density[1] = cosϕ*grad_density[1] + sinϕ*grad_density[2]
+            cylindrical_grad_density[2] = -sinϕ*grad_density[1] + cosϕ*grad_density[2]
+            cylindrical_grad_density[3] = grad_density[3]
             return cylindrical_grad_density
         else
             return grad_density
@@ -385,6 +391,7 @@ function gradient_surface_density(
     "polar" = polar
     """
     if coordinate_flag == "polar"
+        ϕ =  reference_point[2]
         reference_point = _cylin2cart(reference_point)
     end
     truncate_multiplier = KernelFunctionValid()[nameof(smoothed_kernal)]
@@ -411,7 +418,16 @@ function gradient_surface_density(
         for j in eachindex(grad_surface_density)
             grad_surface_density[j] = sum(buffer_array[:, j])
         end
-        return grad_surface_density
+        if coordinate_flag == "polar"
+            cosϕ = cos(ϕ)
+            sinϕ = sin(ϕ)
+            cylindrical_grad_surface_density :: Vector = Vector{Float64}(undef, 2)
+            cylindrical_grad_surface_density[1] = cosϕ*grad_surface_density[1] + sinϕ*grad_surface_density[2]
+            cylindrical_grad_surface_density[2] = -sinϕ*grad_surface_density[1] + cosϕ*grad_surface_density[2]
+            return cylindrical_grad_surface_density
+        else
+            return grad_surface_density
+        end
     end
 end
 
