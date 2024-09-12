@@ -61,13 +61,18 @@ function Faceon_polar_plot(Disk2Ddata :: Analysis_result, array_index :: Int64,L
     if Disk2Ddata.params["Analysis_type"] != "Faceon_disk"
         error("InputError: The Analysis type of data needs to be `Faceon_disk`!")
     end
-    transfer_cgs!(Disk2Ddata)
     s = Disk2Ddata.axes[1]
     slabel = latexstring(L"$r$ [au]")
     ϕ = Disk2Ddata.axes[2]
     ϕlabel = latexstring(L"$\phi$")
     z = Disk2Ddata.data_dict[array_index]
-    z_unit = Disk2Ddata.params["column_units"][array_index]
+    z_unit = ""
+    try
+        z_unit = Disk2Ddata.params["column_units"][array_index]
+    catch e
+        z_unit = Disk2Ddata.column_names[array_index]
+    end 
+    println(z_unit)
     time = Disk2Ddata.time
     label_left = latexstring(L"$t = ",Int64(round(time)), L"$", time_unit)
     label_right = replace_trans_LaTeXStr(Disk2Ddata.column_names[array_index])

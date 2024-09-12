@@ -16,7 +16,11 @@ Transfer a cartesian coordinate into cylindrical coordinate.
 """
 function _cart2cylin(point::Vector)
     s = sqrt(point[1]^2 + point[2]^2)
-    theta = (atan(point[2], point[1]) + 2 * pi) % (2 * pi)
+    if point[2] >= 0.0
+        theta = acos(point[1]/s)
+    else
+        theta = abs(acos(point[1]/s) - 2π)
+    end
     if length(point) == 2
         return [s, theta]
     else
