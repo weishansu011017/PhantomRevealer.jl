@@ -1,4 +1,5 @@
 import subprocess
+import itertools
 import matplotlib.artist
 import numpy as np
 import matplotlib.font_manager
@@ -109,6 +110,9 @@ def Basic_properties_array(arr,array_name):
     print(f'Median: {median}')
     print(f'STD: {std}')
     print('----------------------------------------------------------------')
+
+def color_cycle():
+    return itertools.cycle(plt.rcParams['axes.prop_cycle'].by_key()['color'])
 
 class figure_ax:
     '''

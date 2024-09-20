@@ -396,7 +396,7 @@ function Read_HDF5(filepath::String, close_warn::Bool=false)
         axes = read_dict(f, "axes", Int, Vector)
         column_names = read_dict(f, "column_names", Int, String)
         params = read_dict(f, "params", String, Any)
-        PR_version_match(params["file_identifier"])
+        PR_version_match(params["file_identifier"],close_warn)
         data = Analysis_result(time, data_dict, axes, column_names, params)
     end
     return data

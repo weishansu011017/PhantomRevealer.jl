@@ -134,13 +134,3 @@ function Check_array_quantities(data :: Analysis_result, array_index :: Int64)
     println("STD: $STD")
     println("----------------------------------------------------------------")
 end
-
-function spiral_detection(Disk2Ddata :: Analysis_result)
-    function inverse_logarithmic_spiral(r, k_0, ϕmax, rmax)
-        spiral = mod((log(r/rmax)/k_0)+ϕmax, 2π)
-    end
-    function k2pitch(k)
-        beta = atan(abs(k))*(180/π)
-    end
-    error("This method have not done yet!")
-end

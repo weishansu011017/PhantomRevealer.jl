@@ -1,5 +1,6 @@
 # Pkg Module
 const _MODULE_LIST = [
+    :Clustering,
     :CSV,
     :DataFrames,
     :DataStructures,
@@ -13,6 +14,7 @@ const _MODULE_LIST = [
     :LinearAlgebra,
     :Logging,
     :LoggingExtras,
+    :LsqFit,
     :NearestNeighbors,
     :Pkg,
     :Plots,

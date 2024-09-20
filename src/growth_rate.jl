@@ -88,7 +88,11 @@ function growth_rate(;Κx :: Float64,
     try
         σs :: Vector{ComplexF64} = eigvals(M)
         ss :: Vector{Float64} = real(σs)
-        return maximum(ss)
+        if isinf(maximum(ss))
+            return NaN64
+        else
+            return maximum(ss)
+        end
     catch
         return NaN64
     end
