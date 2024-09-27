@@ -47,6 +47,9 @@ mode:
 - `rnorm :: Vector`: The distance between reference point and every particles. 
 - `mode :: String ="closest"`: The mode of interpolation. (Allowed value: "closest", "mean")
 
+# Keyword argument
+- `Identical_particles :: Bool = true`: Whether all the particles is identical in `data`. If false, particle mass would try to access the mass column i.e. data.data_dict["m"].
+
 # Returns
 - `Float32`: The smoothed radius h.
 """
@@ -69,7 +72,7 @@ function estimate_h_intepolate(
 end
 
 """
-    density(data::PhantomRevealerDataFrame, reference_point::Vector, smoothed_kernal:: Function = M5_spline,h_mode::String="closest", coordinate_flag::String = "cart")
+    density(data::PhantomRevealerDataFrame, reference_point::Vector, smoothed_kernal:: Function = M5_spline,h_mode::String="closest", coordinate_flag::String = "cart";Identical_particles::Bool=true)
 Calculate the density ρ at the given reference point by SPH interpolation
 
 # Parameters
@@ -78,6 +81,9 @@ Calculate the density ρ at the given reference point by SPH interpolation
 - `smoothed_kernal :: Function = M5_spline`: The Kernel function for interpolation.
 - `h_mode :: String="closest"`: The mode for finding a proper smoothed radius. (Allowed value:  "closest", "mean")
 - `coordinate_flag :: String = "cart"`: The coordinate system that is used for given the target. Allowed value: ("cart", "polar") 
+
+# Keyword argument
+- `Identical_particles :: Bool = true`: Whether all the particles is identical in `data`. If false, particle mass would try to access the mass column i.e. data.data_dict["m"].
 
 # Returns
 - `Float64`: The value of density at the reference point.
@@ -97,7 +103,8 @@ function density(
     reference_point::Vector,
     smoothed_kernal::Function = M5_spline,
     h_mode::String = "closest",
-    coordinate_flag::String = "cart",
+    coordinate_flag::String = "cart";
+    Identical_particles::Bool=true
 )
     """
     Here recommended to use a single type of particle.
@@ -111,15 +118,22 @@ function density(
     end
     truncate_multiplier = KernelFunctionValid()[nameof(smoothed_kernal)]
     rnorm = get_rnorm_ref(data, reference_point)
-    particle_mass = data.params["mass"]
+    if Identical_particles
+        particle_mass = data.params["mass"]
+        mass_array = fill(particle_mass,length(rnorm))
+    else
+        mass_array = data.dfdata["m"]
+    end
     h_intepolate = estimate_h_intepolate(data, rnorm, h_mode) # _easy_estimate_h_intepolate(dfdata, rnorm,)
     if h_intepolate == 0.0
         density = 0.0
     else
         truncate_radius = truncate_multiplier * h_intepolate
-        filtered_rnorm = filter(r -> r <= truncate_radius, rnorm)
+        filtered_indices = findall(r -> r <= truncate_radius, rnorm)
+        filtered_rnorm = rnorm[filtered_indices]
+        filtered_m = mass_array[filtered_indices]
         density = sum(
-            particle_mass .*
+            filtered_m .*
             Smoothed_kernel_function.(smoothed_kernal, h_intepolate, filtered_rnorm, 3),
         )
     end
@@ -127,7 +141,7 @@ function density(
 end
 
 """
-    gradient_density(data::PhantomRevealerDataFrame, reference_point::Vector, smoothed_kernal:: Function = M5_spline,h_mode::String="closest", coordinate_flag::String = "cart")
+    gradient_density(data::PhantomRevealerDataFrame, reference_point::Vector, smoothed_kernal:: Function = M5_spline,h_mode::String="closest", coordinate_flag::String = "cart";Identical_particles::Bool=true)
 Calculate the grident of density ∇ρ at the given reference point by SPH interpolation
 
 # Parameters
@@ -136,6 +150,9 @@ Calculate the grident of density ∇ρ at the given reference point by SPH inter
 - `smoothed_kernal :: Function = M5_spline`: The Kernel function for interpolation.
 - `h_mode :: String="closest"`: The mode for finding a proper smoothed radius. (Allowed value: "closest", "mean")
 - `coordinate_flag :: String = "cart"`: The coordinate system that is used for given the target. Allowed value: ("cart", "polar") 
+
+# Keyword argument
+- `Identical_particles :: Bool = true`: Whether all the particles is identical in `data`. If false, particle mass would try to access the mass column i.e. data.data_dict["m"].
 
 # Returns
 - `Vector`: The gradient vector of density at the reference point. The coordinate would be as same as the input(depends on "coordinate_flag").
@@ -155,7 +172,8 @@ function gradient_density(
     reference_point::Vector,
     smoothed_kernal::Function = M5_spline,
     h_mode::String = "closest",
-    coordinate_flag::String = "cart",
+    coordinate_flag::String = "cart";
+    Identical_particles::Bool=true
 )
     """
     Here recommended to use a single type of particle.
@@ -170,7 +188,12 @@ function gradient_density(
     end
     truncate_multiplier = KernelFunctionValid()[nameof(smoothed_kernal)]
     rnorm, xyzref = get_r_ref(data, reference_point)
-    particle_mass = data.params["mass"]
+    if Identical_particles
+        particle_mass = data.params["mass"]
+        mass_array = fill(particle_mass,length(rnorm))
+    else
+        mass_array = data.dfdata["m"]
+    end
     h_intepolate = estimate_h_intepolate(data, rnorm, h_mode) #_easy_estimate_h_intepolate(dfdata, rnorm, 1.0)
     grad_density::Vector = Vector{Float64}(undef, 3)
     if h_intepolate == 0.0
@@ -180,10 +203,11 @@ function gradient_density(
         truncate_radius = truncate_multiplier * h_intepolate
         mask_rnorm = rnorm .< truncate_radius
         xyz_filtered = xyzref[mask_rnorm, :]
+        filtered_m = mass_array[mask_rnorm]
         buffer_array = zeros(Float64, size(xyz_filtered))
         for i = 1:size(xyz_filtered)[1]
             buffer_array[i, :] =
-                particle_mass .* Smoothed_greident_kernel_function(
+                filtered_m[i] .* Smoothed_greident_kernel_function(
                     smoothed_kernal,
                     h_intepolate,
                     xyz_filtered[i, :],
@@ -208,7 +232,7 @@ function gradient_density(
 end
 
 """
-    quantity_intepolate(data::PhantomRevealerDataFrame, reference_point::Vector, column_names::Vector{String}, smoothed_kernal:: Function = M5_spline,h_mode::String="closest", coordinate_flag::String = "cart")
+    quantity_intepolate(data::PhantomRevealerDataFrame, reference_point::Vector, column_names::Vector{String}, smoothed_kernal:: Function = M5_spline,h_mode::String="closest", coordinate_flag::String = "cart";Identical_particles::Bool=true)
 Calculate the value of every requested quantities at the given reference point by SPH interpolation.
 Those points whose neighborhood has no particles around it would be label as `NaN`
 
@@ -219,6 +243,9 @@ Those points whose neighborhood has no particles around it would be label as `Na
 - `smoothed_kernal :: Function = M5_spline`: The Kernel function for interpolation.
 - `h_mode :: String="closest"`: The mode for finding a proper smoothed radius. (Allowed value: "closest", "mean")
 - `coordinate_flag :: String = "cart"`: The coordinate system that is used for given the target. Allowed value: ("cart", "polar") 
+
+# Keyword argument
+- `Identical_particles :: Bool = true`: Whether all the particles is identical in `data`. If false, particle mass would try to access the mass column i.e. data.data_dict["m"].
 
 # Returns
 - `Dict{String, Float64}`: A dictionary that contains the value of quantities at the reference point.
@@ -240,7 +267,8 @@ function quantity_intepolate(
     column_names::Vector{String},
     smoothed_kernal::Function = M5_spline,
     h_mode::String = "closest",
-    coordinate_flag::String = "cart",
+    coordinate_flag::String = "cart";
+    Identical_particles::Bool=true
 )
     """
     Here recommended to use a single type of particle.
@@ -270,7 +298,12 @@ function quantity_intepolate(
     quantity_result = Dict{String,Float64}()
     truncate_multiplier = KernelFunctionValid()[nameof(smoothed_kernal)]
     rnorm = get_rnorm_ref(data, reference_point)
-    particle_mass = data.params["mass"]
+    if Identical_particles
+        particle_mass = data.params["mass"]
+        mass_array = fill(particle_mass,length(rnorm))
+    else
+        mass_array = data.dfdata["m"]
+    end
     h_intepolate = estimate_h_intepolate(data, rnorm, h_mode)
     dfdata = data.dfdata
 
@@ -282,20 +315,21 @@ function quantity_intepolate(
         truncate_radius = truncate_multiplier * h_intepolate
         indices = findall(x -> x <= truncate_radius, rnorm)
         filtered_dfdata = dfdata[indices, :]
-        filtered_rnorm = filter(r -> r <= truncate_radius, rnorm)
+        filtered_rnorm = rnorm[indices]
+        filtered_m = mass_array[indices]
         if rho_flag
-            quantity_result[divided_column] = sum(particle_mass .* (Smoothed_kernel_function.(smoothed_kernal, h_intepolate, filtered_rnorm,3)))
+            quantity_result[divided_column] = sum(filtered_m .* (Smoothed_kernel_function.(smoothed_kernal, h_intepolate, filtered_rnorm,3)))
         end
         for column_name in working_column_names
             filtered_dfdata[!, column_name] ./= filtered_dfdata[!, divided_column]
-            quantity_result[column_name] = sum(particle_mass .* (filtered_dfdata[!, column_name]) .* (Smoothed_kernel_function.(smoothed_kernal, h_intepolate, filtered_rnorm,3)))
+            quantity_result[column_name] = sum(filtered_m .* (filtered_dfdata[!, column_name]) .* (Smoothed_kernel_function.(smoothed_kernal, h_intepolate, filtered_rnorm,3)))
         end
     end
     return quantity_result
 end
 
 """
-    surface_density(data::PhantomRevealerDataFrame, reference_point::Vector, smoothed_kernal:: Function = M5_spline,h_mode::String="closest", coordinate_flag::String = "cart")
+    surface_density(data::PhantomRevealerDataFrame, reference_point::Vector, smoothed_kernal:: Function = M5_spline,h_mode::String="closest", coordinate_flag::String = "cart";Identical_particles::Bool=true)
 Calculate the surface density Σ at the given reference point by SPH interpolation
 
 # Parameters
@@ -304,6 +338,9 @@ Calculate the surface density Σ at the given reference point by SPH interpolati
 - `smoothed_kernal :: Function = M5_spline`: The Kernel function for interpolation.
 - `h_mode :: String="closest"`: The mode for finding a proper smoothed radius. (Allowed value: "closest", "mean")
 - `coordinate_flag :: String = "cart"`: The coordinate system that is used for given the target. Allowed value: ("cart", "polar") 
+
+# Keyword argument
+- `Identical_particles :: Bool = true`: Whether all the particles is identical in `data`. If false, particle mass would try to access the mass column i.e. data.data_dict["m"].
 
 # Returns
 - `Float64`: The value of surface density at the reference point.
@@ -323,7 +360,8 @@ function surface_density(
     reference_point::Vector,
     smoothed_kernal::Function = M5_spline,
     h_mode::String = "closest",
-    coordinate_flag::String = "cart",
+    coordinate_flag::String = "cart";
+    Identical_particles::Bool=true
 )
     """
     Here recommended to use a single type of particle.
@@ -337,15 +375,22 @@ function surface_density(
     end
     truncate_multiplier = KernelFunctionValid()[nameof(smoothed_kernal)]
     snorm = get_snorm_ref(data, reference_point)
-    particle_mass = data.params["mass"]
+    if Identical_particles
+        particle_mass = data.params["mass"]
+        mass_array = fill(particle_mass,length(snorm))
+    else
+        mass_array = data.dfdata["m"]
+    end
     h_intepolate = estimate_h_intepolate(data, snorm, h_mode) #_easy_estimate_h_intepolate(dfdata, rnorm, 1.0)
     if h_intepolate == 0.0
         surface_density = 0.0
     else
         truncate_radius = truncate_multiplier * h_intepolate
-        filtered_snorm = filter(r -> r <= truncate_radius, snorm)
+        filtered_indices = findall(r -> r <= truncate_radius, snorm)
+        filtered_snorm = snorm[filtered_indices]
+        filtered_m = mass_array[filtered_indices]
         surface_density = sum(
-            particle_mass .*
+            filtered_m .*
             Smoothed_kernel_function.(smoothed_kernal, h_intepolate, filtered_snorm, 2),
         )
     end
@@ -353,7 +398,7 @@ function surface_density(
 end
 
 """
-    gradient_surface_density(data::PhantomRevealerDataFrame, reference_point::Vector, smoothed_kernal:: Function = M5_spline,h_mode::String="closest", coordinate_flag::String = "cart")
+    gradient_surface_density(data::PhantomRevealerDataFrame, reference_point::Vector, smoothed_kernal:: Function = M5_spline,h_mode::String="closest", coordinate_flag::String = "cart";Identical_particles::Bool=true)
 Calculate the gredient of surface density ∇Σ at the given reference point by SPH interpolation
 
 # Parameters
@@ -362,6 +407,9 @@ Calculate the gredient of surface density ∇Σ at the given reference point by 
 - `smoothed_kernal :: Function = M5_spline`: The Kernel function for interpolation.
 - `h_mode :: String="closest"`: The mode for finding a proper smoothed radius. (Allowed value: "closest", "mean")
 - `coordinate_flag :: String = "cart"`: The coordinate system that is used for given the target. Allowed value: ("cart", "polar") 
+
+# Keyword argument
+- `Identical_particles :: Bool = true`: Whether all the particles is identical in `data`. If false, particle mass would try to access the mass column i.e. data.data_dict["m"].
 
 # Returns
 - `Vector`: The gradient vector of surface density at the reference point. The coordinate would be as same as the input(depends on "coordinate_flag").
@@ -381,7 +429,8 @@ function gradient_surface_density(
     reference_point::Vector,
     smoothed_kernal::Function = M5_spline,
     h_mode::String = "closest",
-    coordinate_flag::String = "cart",
+    coordinate_flag::String = "cart";
+    Identical_particles::Bool=true
 )
     """
     Here recommended to use a single type of particle.
@@ -396,7 +445,12 @@ function gradient_surface_density(
     end
     truncate_multiplier = KernelFunctionValid()[nameof(smoothed_kernal)]
     snorm, xyref = get_s_ref(data, reference_point)
-    particle_mass = data.params["mass"]
+    if Identical_particles
+        particle_mass = data.params["mass"]
+        mass_array = fill(particle_mass,length(snorm))
+    else
+        mass_array = data.dfdata["m"]
+    end
     h_intepolate = estimate_h_intepolate(data, snorm, h_mode) #_easy_estimate_h_intepolate(dfdata, rnorm, 1.0)
     grad_surface_density::Vector = Vector{Float64}(undef, 2)
     if h_intepolate == 0.0
@@ -406,10 +460,11 @@ function gradient_surface_density(
         truncate_radius = truncate_multiplier * h_intepolate
         mask_snorm = snorm .< truncate_radius
         xy_filtered = xyref[mask_snorm, :]
+        filtered_m = mass_array[mask_snorm]
         buffer_array = zeros(Float64, size(xy_filtered))
         for i = 1:size(xy_filtered)[1]
             buffer_array[i, :] =
-                particle_mass .* Smoothed_greident_kernel_function(
+                filtered_m[i] .* Smoothed_greident_kernel_function(
                     smoothed_kernal,
                     h_intepolate,
                     xy_filtered[i, :],
@@ -432,7 +487,7 @@ function gradient_surface_density(
 end
 
 """
-    quantity_intepolate_2D(data::PhantomRevealerDataFrame, reference_point::Vector, column_names::Vector{String}, smoothed_kernal:: Function = M5_spline,h_mode::String="closest", coordinate_flag::String = "cart")
+    quantity_intepolate_2D(data::PhantomRevealerDataFrame, reference_point::Vector, column_names::Vector{String}, smoothed_kernal:: Function = M5_spline,h_mode::String="closest", coordinate_flag::String = "cart";Identical_particles::Bool=true)
 Calculate the value of every requested quantities at the given reference point by SPH interpolation ON THE 2D PLANE.
 Those points whose neighborhood has no particles around it would be label as `NaN`
 
@@ -444,6 +499,9 @@ Those points whose neighborhood has no particles around it would be label as `Na
 - `smoothed_kernal :: Function = M5_spline`: The Kernel function for interpolation.
 - `h_mode :: String="closest"`: The mode for finding a proper smoothed radius. (Allowed value: "closest", "mean")
 - `coordinate_flag :: String = "cart"`: The coordinate system that is used for given the target. Allowed value: ("cart", "polar") 
+
+# Keyword argument
+- `Identical_particles :: Bool = true`: Whether all the particles is identical in `data`. If false, particle mass would try to access the mass column i.e. data.data_dict["m"].
 
 # Returns
 - `Dict{String, Float64}`: A dictionary that contains the value of quantities at the reference point ON THE 2D PLANE.
@@ -466,7 +524,8 @@ function quantity_intepolate_2D(
     column_names::Vector{String},
     smoothed_kernal::Function = M5_spline,
     h_mode::String = "closest",
-    coordinate_flag::String = "cart",
+    coordinate_flag::String = "cart";
+    Identical_particles::Bool=true
 )
     """
     Here recommended to use a single type of particle.
@@ -490,7 +549,12 @@ function quantity_intepolate_2D(
     quantity_result = Dict{String,Float64}()
     truncate_multiplier = KernelFunctionValid()[nameof(smoothed_kernal)]
     snorm = get_snorm_ref(data, reference_point)
-    particle_mass = data.params["mass"]
+    if Identical_particles
+        particle_mass = data.params["mass"]
+        mass_array = fill(particle_mass,length(snorm))
+    else
+        mass_array = data.dfdata["m"]
+    end
     h_intepolate = estimate_h_intepolate(data, snorm, h_mode)
     dfdata = data.dfdata
 
@@ -503,10 +567,11 @@ function quantity_intepolate_2D(
         truncate_radius = truncate_multiplier * h_intepolate
         indices = findall(x -> x <= truncate_radius, snorm)
         filtered_dfdata = dfdata[indices, :]
-        filtered_snorm = filter(r -> r <= truncate_radius, snorm)
+        filtered_m = mass_array[indices]
+        filtered_snorm = snorm[indices]
         for column_name in working_column_names
             filtered_dfdata[!, column_name] ./= Sigmai
-            quantity_result[column_name] = sum(particle_mass .* (filtered_dfdata[!, column_name]) .* (Smoothed_kernel_function.(smoothed_kernal,h_intepolate,filtered_snorm,2)))
+            quantity_result[column_name] = sum(filtered_m .* (filtered_dfdata[!, column_name]) .* (Smoothed_kernel_function.(smoothed_kernal,h_intepolate,filtered_snorm,2)))
         end
     end
     return quantity_result

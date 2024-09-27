@@ -124,9 +124,8 @@ function Disk_3D_Grid_analysis(
     # Prepare a roughly truncate radius for KD-tree filtering.
     roughly_truncated_radius::Float64 =
         get_truncated_radius(data, -1.0f0, 0.5, smoothed_kernal)
-
     # Iteration
-    @threads for i in eachindex(gridv)
+    for i in eachindex(gridv)
         target = gridv[i]
         kdtf_data = KDtree_filter(data, kdtree3d, target, roughly_truncated_radius, "polar") # New data that has been filtered.
         Result_dict["rho"].grid[i] = wrap_dens(kdtf_data, target)
