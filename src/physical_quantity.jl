@@ -122,7 +122,7 @@ function density(
         particle_mass = data.params["mass"]
         mass_array = fill(particle_mass,length(rnorm))
     else
-        mass_array = data.dfdata["m"]
+        mass_array = data.dfdata[!,"m"]
     end
     h_intepolate = estimate_h_intepolate(data, rnorm, h_mode) # _easy_estimate_h_intepolate(dfdata, rnorm,)
     if h_intepolate == 0.0
@@ -192,7 +192,7 @@ function gradient_density(
         particle_mass = data.params["mass"]
         mass_array = fill(particle_mass,length(rnorm))
     else
-        mass_array = data.dfdata["m"]
+        mass_array = data.dfdata[!,"m"]
     end
     h_intepolate = estimate_h_intepolate(data, rnorm, h_mode) #_easy_estimate_h_intepolate(dfdata, rnorm, 1.0)
     grad_density::Vector = Vector{Float64}(undef, 3)
@@ -302,7 +302,7 @@ function quantity_intepolate(
         particle_mass = data.params["mass"]
         mass_array = fill(particle_mass,length(rnorm))
     else
-        mass_array = data.dfdata["m"]
+        mass_array = data.dfdata[!,"m"]
     end
     h_intepolate = estimate_h_intepolate(data, rnorm, h_mode)
     dfdata = data.dfdata
@@ -379,7 +379,7 @@ function surface_density(
         particle_mass = data.params["mass"]
         mass_array = fill(particle_mass,length(snorm))
     else
-        mass_array = data.dfdata["m"]
+        mass_array = data.dfdata[!,"m"]
     end
     h_intepolate = estimate_h_intepolate(data, snorm, h_mode) #_easy_estimate_h_intepolate(dfdata, rnorm, 1.0)
     if h_intepolate == 0.0
@@ -449,7 +449,7 @@ function gradient_surface_density(
         particle_mass = data.params["mass"]
         mass_array = fill(particle_mass,length(snorm))
     else
-        mass_array = data.dfdata["m"]
+        mass_array = data.dfdata[!,"m"]
     end
     h_intepolate = estimate_h_intepolate(data, snorm, h_mode) #_easy_estimate_h_intepolate(dfdata, rnorm, 1.0)
     grad_surface_density::Vector = Vector{Float64}(undef, 2)
@@ -553,7 +553,7 @@ function quantity_intepolate_2D(
         particle_mass = data.params["mass"]
         mass_array = fill(particle_mass,length(snorm))
     else
-        mass_array = data.dfdata["m"]
+        mass_array = data.dfdata[!,"m"]
     end
     h_intepolate = estimate_h_intepolate(data, snorm, h_mode)
     dfdata = data.dfdata

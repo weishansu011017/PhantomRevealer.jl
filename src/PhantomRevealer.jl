@@ -44,15 +44,6 @@ function initialize_pyplot_backend()
     return prplt
 end
 
-function initialize_modules()
-    for mod in _MODULE_LIST
-        Base.eval(Main, :(using $(Symbol(mod))))
-    end
-    Base.eval(Main, :(using Base.Sys))
-    Base.eval(Main, :(using Base.Threads))
-    Base.eval(Main, :(using Base.Iterators))
-end
-
 # Import Python plt backend
 push!(pyimport("sys")."path", _module_location)
 prplt = pyimport("pyplot_backend")

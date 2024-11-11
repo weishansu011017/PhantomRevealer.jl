@@ -1,5 +1,5 @@
 # Pkg Module
-const _MODULE_LIST = [
+const MODULE_LIST = [
     :Clustering,
     :CSV,
     :DataFrames,
@@ -25,7 +25,7 @@ const _MODULE_LIST = [
     :StatsPlots,
     :StatsBase,
 ]
-for mod in _MODULE_LIST
+for mod in MODULE_LIST
     @eval using $(Symbol(mod))
 end
 @eval using Base.Sys

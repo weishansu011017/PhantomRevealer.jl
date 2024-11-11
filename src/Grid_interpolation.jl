@@ -65,13 +65,14 @@ function Disk_3D_Grid_analysis(
     z_params::Tuple{Float64,Float64,Int},
     column_names::Vector{String},
     smoothed_kernal::Function = M5_spline,
-    h_mode::String = "closest"
+    h_mode::String = "closest";
+    Identical_particles::Bool=true
 )
     function wrap_dens(data::PhantomRevealerDataFrame, point::Array)::Float64
-        return density(data, point, smoothed_kernal, h_mode, "polar")
+        return density(data, point, smoothed_kernal, h_mode, "polar",Identical_particles=Identical_particles)
     end
     function wrap_graddens(data::PhantomRevealerDataFrame, point::Array)::Vector
-        return gradient_density(data, point, smoothed_kernal, h_mode, "polar")
+        return gradient_density(data, point, smoothed_kernal, h_mode, "polar",Identical_particles=Identical_particles)
     end
     function wrap_quant(data::PhantomRevealerDataFrame, point::Array)::Dict{String,Float64}
         return quantity_intepolate(
@@ -81,6 +82,7 @@ function Disk_3D_Grid_analysis(
             smoothed_kernal,
             h_mode,
             "polar",
+            Identical_particles=Identical_particles
         )
     end
     @info "Start 3D disk grid analysis."
@@ -201,7 +203,8 @@ function Disk_scale_height_analysis(
     ϕ_params::Tuple{Float64,Float64,Int} = (0.0, 2π, 8),
     z_params::Tuple{Float64,Float64,Int} = (0.0, 28.0, 70),
     smoothed_kernal::Function = M5_spline,
-    h_mode::String = "closest"
+    h_mode::String = "closest";
+    Identical_particles::Bool=true
 )
     edgeon_data_3D = Disk_3D_Grid_analysis(
         data,
@@ -211,6 +214,7 @@ function Disk_scale_height_analysis(
         Vector{String}(),
         smoothed_kernal,
         h_mode,
+        Identical_particles=Identical_particles
     )
     result = Disk_scale_height_analysis(edgeon_data_3D)
     return result
@@ -275,7 +279,8 @@ function Disk_2D_midplane_function_generator(
     ϕ_params::Tuple{Float64,Float64,Int} = (0.0, 2π, 24),
     z_params::Tuple{Float64,Float64,Int} = (-28.0, 28.0, 100),
     smoothed_kernal::Function = M5_spline,
-    h_mode::String = "closest"
+    h_mode::String = "closest";
+    Identical_particles::Bool=true
 )
     edgeon_data_3D = Disk_3D_Grid_analysis(
         data,
@@ -285,6 +290,7 @@ function Disk_2D_midplane_function_generator(
         Vector{String}(),
         smoothed_kernal,
         h_mode,
+        Identical_particles=Identical_particles
     )
     if ϕ_params[2] == 2π
         circ_flag = true
@@ -354,16 +360,17 @@ function Disk_2D_FaceOn_Grid_analysis(
     mid_column_names::Vector{String},
     midz_func::Interpolations.Extrapolation,
     smoothed_kernal::Function = M5_spline,
-    h_mode::String = "closest"
+    h_mode::String = "closest";
+    Identical_particles::Bool=true
 )
     function wrap_surf_dens(data::PhantomRevealerDataFrame, point::Array)::Float64
-        return surface_density(data, point, smoothed_kernal, h_mode, "polar")
+        return surface_density(data, point, smoothed_kernal, h_mode, "polar",Identical_particles=Identical_particles)
     end
     function wrap_grad_surf_dens(
         data::PhantomRevealerDataFrame,
         point::Array,
     )::Vector{Float64}
-        return gradient_surface_density(data, point, smoothed_kernal, h_mode, "polar")
+        return gradient_surface_density(data, point, smoothed_kernal, h_mode, "polar",Identical_particles=Identical_particles)
     end
     function wrap_quant(data::PhantomRevealerDataFrame, point::Array)::Dict{String,Float64}
         return quantity_intepolate(
@@ -373,6 +380,7 @@ function Disk_2D_FaceOn_Grid_analysis(
             smoothed_kernal,
             h_mode,
             "polar",
+            Identical_particles=Identical_particles
         )
     end
     function wrap_quant2D(
@@ -388,6 +396,7 @@ function Disk_2D_FaceOn_Grid_analysis(
             smoothed_kernal,
             h_mode,
             "polar",
+            Identical_particles=Identical_particles
         )
     end
     @info "Start 2D disk grid analysis."
@@ -477,5 +486,124 @@ function Disk_2D_FaceOn_Grid_analysis(
         
     end
     @info "End 2D disk grid analysis."
+    return Result_dict
+end
+
+"""
+    gridbackend_Grid_analysis(data::PhantomRevealerDataFrame,grid::gridbackend,column_names::Vector{String},smoothed_kernal::Function = M5_spline,h_mode::String = "closest",coordinate_flag:: String = "cart")
+Calculate the SPH interpolation on a given grid that is described as `gridbackend`.
+
+h_mode: 
+"closest": Choose h of the closest particles.
+"mean": use the mean value of h in the data.
+
+coordinate_flag: 
+"cart": Cartesian coodinate
+"polar": Polar/Cylindrical coordinate
+
+# Parameters
+- `data :: PhantomRevealerDataFrame`: The SPH data that is stored in `PhantomRevealerDataFrame` 
+- `grid :: gridbackend`: The grid. 
+- `column_names :: Vector{String}`: The quantities that would be interpolated.
+- `smoothed_kernal :: Function = M5_spline`: The Kernel function for interpolation.
+- `h_mode :: String = "closest"`: The mode for finding a proper smoothed radius. (Allowed value: "closest", "mean")
+- `coordinate_flag :: String = "cart": The coordinate system that is used for given the target. (Allowed value: "cart", "polar")
+
+# Returns
+- `Dict{String, gridbackend}`: The dictionary that contains all of the result by the form `gridbackend`.
+"""
+function gridbackend_Grid_analysis(
+    data::PhantomRevealerDataFrame,
+    grid::gridbackend,
+    column_names::Vector{String},
+    smoothed_kernal::Function = M5_spline,
+    h_mode::String = "closest",
+    coordinate_flag:: String = "cart";
+    Identical_particles::Bool=true
+)   
+    function generate_functions(grid_dimension::Int)
+        if grid_dimension == 2
+            dens_name = "Sigma"
+            kdtree = Generate_KDtree(data, 2)
+            
+            wrap_dens = (data, point) -> begin
+                surface_density(data, point, smoothed_kernal, h_mode, coordinate_flag,Identical_particles=Identical_particles)
+            end
+            
+            wrap_quant = (data, point, deni) -> begin
+                quantity_intepolate_2D(
+                    data,
+                    point,
+                    deni,
+                    column_names,
+                    smoothed_kernal,
+                    h_mode,
+                    coordinate_flag,
+                    Identical_particles=Identical_particles
+                )
+            end
+
+            return wrap_dens, wrap_quant, dens_name, kdtree
+
+        elseif grid_dimension == 3
+            dens_name = "rho"
+            kdtree = Generate_KDtree(data, 3)
+            
+            wrap_dens = (data, point) -> begin
+                density(data, point, smoothed_kernal, h_mode, coordinate_flag,Identical_particles=Identical_particles)
+            end
+
+            wrap_quant = (data, point, deni) -> begin
+                quantity_intepolate(
+                    data,
+                    point,
+                    column_names,
+                    smoothed_kernal,
+                    h_mode,
+                    coordinate_flag,
+                    Identical_particles=Identical_particles
+                )
+            end
+
+            return wrap_dens, wrap_quant, dens_name, kdtree
+
+        else
+            error("DimensionMismatch: Unable to generate the KDTree.")
+        end
+    end
+
+    wrap_dens, wrap_quant, dens_name, kdtree = generate_functions(length(grid.dimension))
+    @info "Start grid analysis. "
+    # Generate the coordinate array for the grid interpolation
+    gridv::Array{Vector{Float64}} = generate_coordinate_grid(grid)
+
+    # Preparation of result dictionary
+    Result_dict = Dict{String,gridbackend}()
+    Result_dict[dens_name] = deepcopy(grid)
+    for column_name in column_names
+        (column_name == dens_name) && continue
+        Result_dict[column_name] = deepcopy(grid)
+    end
+
+    # Prepare a roughly truncate radius for KD-tree filtering.
+    roughly_truncated_radius::Float64 =
+        get_truncated_radius(data, -1.0f0, 0.5, smoothed_kernal)
+
+    # Iteration
+    @threads for i in eachindex(gridv)
+        target = gridv[i]
+        kdtf_data = KDtree_filter(data, kdtree, target, roughly_truncated_radius, coordinate_flag) # New data that has been filtered.
+        deni = wrap_dens(kdtf_data,target)
+        Result_dict[dens_name].grid[i] = deni
+        quantity_interpolation_dict::Dict{String,Float64} = wrap_quant(kdtf_data, target, deni)
+        if all(key -> haskey(Result_dict, key), keys(quantity_interpolation_dict))
+            for key in keys(quantity_interpolation_dict)
+                Result_dict[key].grid[i] = quantity_interpolation_dict[key]
+            end
+        else
+            error("IntepolateError: Missing column name!")
+        end
+    end
+    @info "End grid analysis."
     return Result_dict
 end

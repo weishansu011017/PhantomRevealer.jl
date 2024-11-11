@@ -73,7 +73,13 @@ Get the time of simulation in code unit.
 - 'Float64': The time of simulation.
 """
 function get_time(data::PhantomRevealerDataFrame)
-    return data.params["time"]
+    if haskey(data.params,"time")
+        return data.params["time"]
+    elseif haskey(data.params,"Time")
+        return data.params["Time"]
+    else
+        return 
+    end
 end
 
 """
@@ -787,17 +793,14 @@ Generate the dictionary for recording the basic properties of dumpfile.
 - `Dict{String, Any}`: The dictionary of parameters.
 """
 function Analysis_params_recording(data::PhantomRevealerDataFrame)
+    record_params = ["Origin_sink_id","Origin_sink_mass","grainsize","graindens","qfacdisc","udist","umass","utime","umagfd"]
     params = Dict{String,Any}()
     data_params = data.params
     params["time"] = get_time(data)
-    params["Origin_sink_id"] = data_params["Origin_sink_id"]
-    params["Origin_sink_mass"] = data_params["Origin_sink_mass"]
-    params["grainsize"] = data_params["grainsize"]
-    params["graindens"] = data_params["graindens"]
-    params["qfacdisc"] = data_params["qfacdisc"]
-    params["udist"] = data_params["udist"]
-    params["umass"] = data_params["umass"]
-    params["utime"] = data_params["utime"]
-    params["umagfd"] = data_params["umagfd"]
+    for rparam in record_params
+        if haskey(data_params,rparam)
+            params[rparam] = data_params[rparam]
+        end
+    end
     return params
 end

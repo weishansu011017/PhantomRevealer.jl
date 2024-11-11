@@ -8,11 +8,12 @@
 import numpy as np
 import argparse
 import sys
-from julia import Main as jl
-from julia import PhantomRevealer
+import juliacall
 from math import isclose
 
-PhantomRevealer_path = PhantomRevealer.get_PhantomRevealer_path()
+jl = juliacall.newmodule("PhantomRevealer")
+jl.seval("using PhantomRevealer")
+PhantomRevealer_path = jl.get_PhantomRevealer_path()
 sys.path.insert(0, f'{PhantomRevealer_path}/src')
 sys.path.insert(0, f'{PhantomRevealer_path}/script')
 
@@ -32,7 +33,7 @@ def growth_rate_calculation(data:PhantomRevealerAnalysisResult, s_index, phi_ind
     udist = data.params["udist"]
     uv = udist/utime
     
-    ginput : dict = PhantomRevealer.growth_rate_input_dict()
+    ginput : dict = jl.growth_rate_input_dict()
     s = data.axes[1][s_index]
     omega_cgs = astrounit2KeperianAngularVelocity(s,data.params['Origin_sink_mass'])
     ginput['Ω'] = omega_cgs
@@ -50,7 +51,6 @@ def growth_rate_calculation(data:PhantomRevealerAnalysisResult, s_index, phi_ind
     else:
         cs_cgs = cs
     ginput['cs'] = cs_cgs
-    ginput['St'] = None
     for key in data.column_names.keys():
         column = data.column_names[key]
         if 'St' in column:
@@ -62,7 +62,7 @@ def growth_rate_calculation(data:PhantomRevealerAnalysisResult, s_index, phi_ind
     ginput['vy'] /= cs_cgs
     ginput['ωx'] /= cs_cgs
     ginput['ωy'] /= cs_cgs
-    growth_rate = PhantomRevealer.growth_rate_vectors(Κx=msetup['Kx'],
+    growth_rate = jl.growth_rate_vectors(Κx=msetup['Kx'],
                                     Κz=msetup['Kz'],
                                     St=ginput['St'],
                                     ρg=ginput['ρg'],
@@ -73,7 +73,7 @@ def growth_rate_calculation(data:PhantomRevealerAnalysisResult, s_index, phi_ind
                                     ωy=ginput['ωy'],)
     return growth_rate
 
-def on_click(event,fax:LcartRpolar_plot,s:np.ndarray,phi:np.ndarray,data:PhantomRevealerAnalysisResult,msetup:dict,column_indices:dict,colormap_L:str):
+def on_click(event,fax:LcartRpolar_plot,s:np.ndarray,phi:np.ndarray,data:PhantomRevealerAnalysisResult,msetup:dict,column_indices:dict,colormap_L):
     marker_label = 'polar_marker'
     if event.inaxes == fax.ax[1]:
         phi_click = event.xdata
@@ -120,6 +120,7 @@ def core(file:str,Polar_index:int) -> LcartRpolar_plot:
     Kz = np.logspace(0.0,4.0,151)
     
     colormap_L = "jet"
+    colormap_bottom2white = True
     colormap_R = "binary"
     Polar_log = False
     vlimr = None
@@ -145,6 +146,10 @@ def core(file:str,Polar_index:int) -> LcartRpolar_plot:
     column_indices["vy"] = vy_index
     column_indices["ωx"] = omegax_index
     column_indices["ωy"] = omegay_index
+    
+    # Modified colormap (If necessary)
+    if colormap_bottom2white:
+        colormap_L = colormap_with_base(colormap_L)
     
     j = 0
     

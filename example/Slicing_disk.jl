@@ -1,5 +1,5 @@
 using PhantomRevealer
-initialize_modules()
+using LaTeXStrings
 
 """
 Slice the disk for checking the edge-on vertical structure.
@@ -88,7 +88,7 @@ function Slicing_disk(file::String)
     grids_dictd :: Dict{String, gridbackend} = Disk_3D_Grid_analysis(datad, sparams, ϕparams, zparams, column_names, smoothed_kernel, h_mode)
 
     # Packaging the grids dictionary
-    final_dict :: OrderedDict = create_grids_dict(["g","d"], [grids_dictg, grids_dictd])
+    final_dict = create_grids_dict(["g","d"], [grids_dictg, grids_dictd])
 
     # Packaging the result
     Result_buffer :: Analysis_result_buffer = Analysis_result_buffer(time, final_dict, columns_order,params)
@@ -101,8 +101,14 @@ function Slicing_disk(file::String)
 
     # Construct the figure
     if figure
+        prplt = initialize_pyplot_backend()
+
+        # Modified Colormap to have white color at the bottom
+        colormap_gas_modified = prplt.colormap_with_base(colormap_gas)
+        colormap_dust_modified = prplt.colormap_with_base(colormap_dust)
+
         # Packaging parameters
-        colormaps = [colormap_gas,colormap_dust]
+        colormaps = [colormap_gas_modified,colormap_dust_modified]
         clims = [clim_gas, clim_dust]
         number_data = extract_number(file)
 
@@ -137,7 +143,6 @@ function Slicing_disk(file::String)
         rhog, rhod, vsg, vsd, vzg, vzd = reduced_array
 
         # Preparing plotting backend
-        prplt = initialize_pyplot_backend()
         fax = prplt.cart_plot(s, z, slabel, zlabel)
         fax.__class__.anato_text_position = [0.01,0.96]
         fax.setup_fig(2,1,figsize)

@@ -44,17 +44,23 @@ end
 
 """
     extract_number(str::String)
-Extract the lase group of number in a string.
+Extract the last group of numbers in a string, or the last group between the last underscore (`_`) and the file extension if present.
 
 # Parameters
-- `str :: String`: The string that contains number.
+- `str :: String`: The string that contains numbers.
 
 # Returns
 - `String`: The string of number.
 """
 function extract_number(str::String)
-    matches = findall(r"\d+", str)
-    return !isempty(matches) ? str[matches[end].start:matches[end].stop] : ""
+    matches = collect(eachmatch(r"_(\d+)\.", str))
+    
+    if !isempty(matches)
+        return matches[end].captures[1]
+    else
+        number_matches = findall(r"\d+", str)
+        return !isempty(number_matches) ? str[number_matches[end].start:number_matches[end].stop] : ""
+    end
 end
 
 """
@@ -113,7 +119,11 @@ function create_column_names(keys_order::Vector{String}, suffixes::Vector, midz:
     end
     for key in keys_order
         for suffix in suffixes
-            push!(column_names, string(key, "_", suffix))
+            if !(suffix == "")
+                push!(column_names, string(key, "_", suffix))
+            else
+                push!(column_names, key)
+            end
         end
     end
     return column_names
@@ -121,36 +131,34 @@ end
 
 """
     create_column_dict(column_names::Array{String})
-Create the dictionary of column names in the `[0X     NAME]`-alike format.
+Create the dictionary of column names in the `[0X     NAME]`-alike format. If the column name length exceeds 11 characters, the format will be `[0X NAME]` without a fixed total length.
 
 # Parameters
 - `column_names :: Array{String}`: The column name array.
 
 # Returns
 - `Dict{Int, String}`: The column name dictionary.
-
-# Example
-```julia
-keys = ["rho", "vs", "vϕ", "vz", "e"]
-suffixes = ["g", "d"]
-column_names = create_column_names(keys, suffixes)
-println(column_names)  # Print out: ["midz", "rho_g", "rho_d", "vs_g", "vs_d", "vϕ_g", "vϕ_d", "vz_g", "vz_d", "e_g", "e_d"]
-column_dict = create_column_dict(column_names)
-println(values(column_dict))  # Print out(non-ordered): ["[05        vs_d]", "[08        vz_g]", "[01         midz]", "[06        vϕ_g]", "[11         e_d]", "[09        vz_d]", "[03       rho_d]", "[07        vϕ_d]", "[04        vs_g]", "[02       rho_g]", "[10         e_g]"]
-```
 """
 function create_column_dict(column_names::Array{String})
-    column_format = Dict{Int,String}()
-
+    column_format = Dict{Int, String}()
+    
     total_length = 16
     index_length = 2
+    max_name_length = 11
 
     for (i, name) in enumerate(column_names)
         index_str = lpad(i, index_length, '0')
-        space_padding = total_length - length(index_str) - length(name) - 3
-        formatted_name = "[" * index_str * " " * repeat(" ", space_padding) * name * "]"
+        
+        if length(name) > max_name_length
+            formatted_name = "[" * index_str * " " * name * "]"
+        else
+            space_padding = total_length - length(index_str) - length(name) - 3
+            formatted_name = "[" * index_str * " " * repeat(" ", space_padding) * name * "]"
+        end
+        
         column_format[i] = formatted_name
     end
+    
     return column_format
 end
 
@@ -233,7 +241,9 @@ function Analysis_result_buffer(
     prepare_dict = deepcopy(grids_dict)
     for suffix in suffixes
         griddict = prepare_dict[suffix]
-        add_suffix_to_keys!(griddict, "_$suffix")
+        if !(suffix == "")
+            add_suffix_to_keys!(griddict, "_$suffix")
+        end
     end
 
     data_dict = Dict{Int,gridbackend}()
@@ -320,9 +330,9 @@ function Write_HDF5(
     data.params["file_identifier"] = file_identifier(Analysis_type)
     data.params["Analysis_type"] = Analysis_type
     if data_prefix == "NaS"
-        try
+        if haskey(data.params,"Analysis_type")
             data_prefix = data.params["Analysis_type"]
-        catch
+        else
             data_prefix = ""
         end
     end
@@ -451,12 +461,19 @@ function transfer_cgs!(data::Analysis_result, year::Bool = true)
     umass = data.params["umass"]
     udist = data.params["udist"]
     utime = data.params["utime"]
-    try
-        _ = data.params["_cgs"]
-    catch err
+    if !(haskey(data.params,"_cgs"))
+        cgs_flag = false
+    else
+        cgs_flag = data.params["_cgs"]
+    end
+    if !(cgs_flag)
         usigma = umass / (udist^2)
         urho = umass / (udist^3)
-        uv = udist / utime
+        if haskey(data.params,"uv")
+            uv = data.params["uv"]
+        else
+            uv = udist / utime
+        end
 
         if year
             data.time *= (utime / 31536000)
