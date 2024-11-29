@@ -14,91 +14,195 @@ Step 3. Calculate the result for each point by using the SPH intepolation. The c
 """
 
 """
-    Disk_3D_Grid_analysis(data::PhantomRevealerDataFrame ,s_params::Tuple{Float64,Float64,Int} ,ϕ_params :: Tuple{Float64,Float64,Int} ,z_params::Tuple{Float64,Float64,Int},column_names::Vector{String}, smoothed_kernal:: Function = M5_spline,h_mode::String="closest")
-Calculate the SPH interpolation on a Edge-on grid that is described as a cylindrical coordinate (s,ϕ,z) for a disk.
+    Disk_3D_Grid_analysis(
+        data::PhantomRevealerDataFrame,
+        s_params::Tuple{Float64,Float64,Int},
+        ϕ_params::Tuple{Float64,Float64,Int},
+        z_params::Tuple{Float64,Float64,Int};
+        column_names::Union{Nothing,Vector{String}}=nothing,
+        gradient_column_names::Union{Nothing,Vector{String}}=nothing,
+        divergence_column_names::Union{Nothing,Vector{String}}=nothing,
+        curl_column_names::Union{Nothing,Vector{String}}=nothing,
+        smoothed_kernel::Function = M5_spline,
+        h_mode::String = "closest",
+        Identical_particles::Bool = true
+    )
+Calculate the SPH interpolation on a grid that is described as a cylindrical coordinate (s,ϕ,z) for a disk.
 
-Note: The grident values of arbitary quantities haven't supported yet!
-
-The density `rho` and its grident vector `∇rho` would be calculated automatically. The `∇ρ` would be in cylindrical coordinate (∇ρs, ∇ρϕ, ∇ρz)
-
-h_mode: 
-"closest": Choose h of the closest particles.
-"mean": use the mean value of h in the data.
+The density `rho` and its gradient vector `∇rho` will be calculated automatically. The `∇rho` values are returned in cylindrical coordinates (∇rho_s, ∇rho_ϕ, ∇rho_z).
 
 # Parameters
-- `data :: PhantomRevealerDataFrame`: The SPH data that is stored in `PhantomRevealerDataFrame` 
-- `s_params :: Tuple{Float64,Float64,Int}`: The radial parameters with [smin, smax, sn]
-- `ϕ_params :: Tuple{Float64,Float64,Int}`: The azimuthal parameters with [ϕmin, ϕmax, ϕn]
-- `z_params :: Tuple{Float64,Float64,Int}`: The height parameters with [zmin, zmax, zn]
-- `column_names :: Vector{String}`: The quantities that would be interpolated.
-- `smoothed_kernal :: Function = M5_spline`: The Kernel function for interpolation.
-- `h_mode :: String="closest"`: The mode for finding a proper smoothed radius. (Allowed value: "closest", "mean")
+- `data :: PhantomRevealerDataFrame`: The SPH data stored in `PhantomRevealerDataFrame`. 
+- `s_params :: Tuple{Float64,Float64,Int}`: The radial parameters [smin, smax, sn].
+- `ϕ_params :: Tuple{Float64,Float64,Int}`: The azimuthal parameters [ϕmin, ϕmax, ϕn].
+- `z_params :: Tuple{Float64,Float64,Int}`: The vertical parameters [zmin, zmax, zn].
+
+# Keyword Arguments
+- `column_names :: Union{Nothing, Vector{String}}=nothing`: The quantities to interpolate. If `nothing`, no additional quantities will be interpolated.
+- `gradient_column_names :: Union{Nothing, Vector{String}}=nothing`: The gradient value of quantities to interpolate. If `nothing`, no additional quantities will be interpolated.
+- `divergence_column_names :: Union{Nothing, Vector{String}}=nothing`: The divergence value of quantities to interpolate. For vector quantities (e.g., data columns named "vx", "vy", "vz"), you only need to provide the common prefix of the vector name, such as "v". If `nothing`, no additional quantities will be interpolated.
+- `curl_column_names :: Union{Nothing, Vector{String}}=nothing`: The curl value of quantities to interpolate. For vector quantities (e.g., data columns named "vx", "vy", "vz"), you only need to provide the common prefix of the vector name, such as "v". If `nothing`, no additional quantities will be interpolated.
+- `smoothed_kernel :: Function = M5_spline`: The kernel function for SPH interpolation.
+- `h_mode :: String = "closest"`: The mode for determining the smoothing radius. Allowed values are `"closest"` and `"mean"`.
+- `Identical_particles :: Bool = true`: Whether the particles are identical (default: `true`).
 
 # Returns
-- `Dict{String, gridbackend}`: The dictionary that contains all of the result by the form `gridbackend`.
+- `Dict{String, gridbackend}`: A dictionary containing the interpolated results in the form of `gridbackend`.
 
 # Examples
 ```julia
-# Preparation
-prdf_list :: Vector = read_phantom("dumpfile_00000", "all")
-COM2star!(prdf_list, prdf_list[end],1)
-data :: PhantomRevealerDataFrame = prdf_list[1]
+data :: PhantomRevealerDataFrame = read_phantom("dumpfile_00000", "all")[1]
 add_cylindrical!(data)
-add_eccentricity!(data)
-sparams :: Tuple{Float64,Float64,Int} = (10.0,100.0,91)
-ϕparams :: Tuple{Float64,Float64,Int} = (0.0,2π,12)
-zparams :: Tuple{Float64,Float64,Int} = (0.0,30.0,151)
-smoothed_kernal :: Function = M6_spline
-hmode :: String = "closest"
+s_params :: Tuple{Float64,Float64,Int} = (10.0,100.0,91)
+ϕ_params :: Tuple{Float64,Float64,Int} = (0.0,2π,12)
+z_params :: Tuple{Float64,Float64,Int} = (0.0,30.0,151)
+smoothed_kernel :: Function = M6_spline
+column_names :: Vector = ["vs", "vϕ", "vz"]
 
-H_func = Disk_scale_height_analysis(data, sparams)
-
-column_names :: Vector = [ "vs", "vϕ", "vz", "e"]
-result1 :: Dict{String, gridbackend} = Disk_3D_Grid_analysis(data, sparams,ϕparams, zparams , column_name, smoothed_kernal,hmode)
-println(keys(result1)) # Print out ["Sigma", "∇Sigmas", "∇Sigmaϕ", "e", "rhom", "vsm", "vϕm"]
+result :: Dict{String, gridbackend} = Disk_3D_Grid_analysis(
+    data, s_params, ϕ_params, z_params;
+    column_names=column_names,
+    smoothed_kernel=smoothed_kernel
+)
+println(keys(result))  # Output: ["rho", "∇rhos", "∇rhoϕ", "∇rhoz", "vs", "vϕ", "vz"]
 ```
 """
 function Disk_3D_Grid_analysis(
     data::PhantomRevealerDataFrame,
     s_params::Tuple{Float64,Float64,Int},
     ϕ_params::Tuple{Float64,Float64,Int},
-    z_params::Tuple{Float64,Float64,Int},
-    column_names::Vector{String},
-    smoothed_kernal::Function = M5_spline,
-    h_mode::String = "closest";
+    z_params::Tuple{Float64,Float64,Int};
+    column_names::Union{Nothing,Vector{String}}=nothing,
+    gradient_column_names::Union{Nothing,Vector{String}}=nothing,
+    divergence_column_names::Union{Nothing,Vector{String}}=nothing,
+    curl_column_names::Union{Nothing,Vector{String}}=nothing,
+    smoothed_kernel::Function = M5_spline,
+    h_mode::String = "closest",
     Identical_particles::Bool=true
 )
     function wrap_dens(data::PhantomRevealerDataFrame, point::Array)::Float64
-        return density(data, point, smoothed_kernal, h_mode, "polar",Identical_particles=Identical_particles)
+        return density(data, point, smoothed_kernel, h_mode, "polar",Identical_particles=Identical_particles)
     end
     function wrap_graddens(data::PhantomRevealerDataFrame, point::Array)::Vector
-        return gradient_density(data, point, smoothed_kernal, h_mode, "polar",Identical_particles=Identical_particles)
+        return gradient_density(data, point, smoothed_kernel, h_mode, "polar",Identical_particles=Identical_particles)
     end
     function wrap_quant(data::PhantomRevealerDataFrame, point::Array)::Dict{String,Float64}
         return quantity_intepolate(
             data,
             point,
             column_names,
-            smoothed_kernal,
+            smoothed_kernel,
             h_mode,
             "polar",
             Identical_particles=Identical_particles
         )
     end
+    function wrap_gradquant(data::PhantomRevealerDataFrame, point::Array, column_name::String,density_value::Union{Nothing,Float64}=nothing, quantity_value::Union{Nothing,Float64} = nothing)
+        return gradient_quantity_intepolate(
+            data,
+            point,
+            column_name,
+            smoothed_kernel,
+            h_mode,
+            "polar",
+            Identical_particles=Identical_particles,
+            density_value=density_value,
+            quantity_value=quantity_value
+        )
+    end
+    function wrap_curlquant(data::PhantomRevealerDataFrame, point::Array, column_name::String,density_value::Union{Nothing,Float64}=nothing, quantity_value::Union{Nothing,Float64} = nothing)
+        return curl_quantity_intepolate(
+            data,
+            point,
+            column_name,
+            smoothed_kernel,
+            h_mode,
+            "polar",
+            Identical_particles=Identical_particles,
+            density_value=density_value,
+            quantity_value=quantity_value
+        )
+    end
     @info "Start 3D disk grid analysis."
     # Add necessary quantities
     add_necessary_quantity!(data)
-
+    
     # Checking data before interpolation
+    ###############################
+    # Checking the necessity of intepolation
+    # Regular intepolation
+    columnNotEmpty = true
+    if isnothing(column_names)
+        columnNotEmpty = false
+    elseif isempty(column_names)
+        columnNotEmpty = false
+    end
+    # Gradient intepolation
+    gradcolumnNotEmpty = true
+    if isnothing(gradient_column_names)
+        gradcolumnNotEmpty = false
+    elseif isempty(column_names)
+        gradcolumnNotEmpty = false
+    end
+    # Divergence intepolation
+    divercolumnNotEmpty = true
+    if isnothing(divergence_column_names)
+        divercolumnNotEmpty = false
+    elseif isempty(column_names)
+        divercolumnNotEmpty = false
+    end
+    # Curl intepolation
+    curlcolumnNotEmpty = true
+    if isnothing(curl_column_names)
+        curlcolumnNotEmpty = false
+    elseif isempty(column_names)
+        curlcolumnNotEmpty = false
+    end
+    ###############################
     if (data.params["Origin_sink_id"] == -1)
         error("IntepolateError: Wrong origin located!")
     end
 
-    for column_name in column_names
-        if !(hasproperty(data.dfdata, column_name))
-            error("IntepolateError: Missing column name $column_name !")
+    # Check missing columns. Also checking if the regular intepolation also intepolate the same column in the first deriviative intepolation to reduce calculation.
+    if columnNotEmpty
+        for column_name in column_names
+            if !(hasproperty(data.dfdata, column_name))
+                error("IntepolateError: Missing column name $column_name !")
+            end
         end
     end
+
+    if gradcolumnNotEmpty
+        grad_value_exist :: Vector{Bool} = Vector{Bool}(undef,length(gradient_column_names))
+        for column_name in gradient_column_names
+            if !(hasproperty(data.dfdata, column_name))
+                error("IntepolateError: Missing column name $column_name !")
+            end
+        end
+        for (i,gradcolumn) in enumerate(gradient_column_names)
+            if gradcolumn in column_names
+                grad_value_exist[i] = true
+            else
+                grad_value_exist[i] = false
+            end
+        end
+    end
+
+    # if curlcolumnNotEmpty
+    #     curl_value_exist :: Vector{Bool} = Vector{Bool}(undef,length(curl_column_names))
+    #     for column_name in curl_column_names
+    #         if !(hasproperty(data.dfdata, column_name))
+    #             error("IntepolateError: Missing column name $column_name !")
+    #         end
+    #     end
+    #     for (i,gradcolumn) in enumerate(gradient_column_names)
+    #         if gradcolumn in column_names
+    #             grad_value_exist[i] = true
+    #         else
+    #             grad_value_exist[i] = false
+    #         end
+    #     end
+    # end
 
     # Generate kd tree in 3D space
     kdtree3d = Generate_KDtree(data, 3)
@@ -106,8 +210,8 @@ function Disk_3D_Grid_analysis(
     # Generate Edge-on grid 
     imin::Vector = [s_params[1], ϕ_params[1], z_params[1]]
     imax::Vector = [s_params[2], ϕ_params[2], z_params[2]]
-    in::Vector = [s_params[3], ϕ_params[3], z_params[3]]
-    empty_gridbackend::gridbackend = disk_3d_grid_generator(imin, imax, in)
+    iaxen::Vector = [s_params[3], ϕ_params[3], z_params[3]]
+    empty_gridbackend::gridbackend = disk_3d_grid_generator(imin, imax, iaxen)
 
     # Generate the coordinate array for the grid interpolation
     gridv::Array{Vector{Float64}} = generate_coordinate_grid(empty_gridbackend)
@@ -118,16 +222,40 @@ function Disk_3D_Grid_analysis(
     Result_dict["∇rhos"] = deepcopy(empty_gridbackend)
     Result_dict["∇rhoϕ"] = deepcopy(empty_gridbackend)
     Result_dict["∇rhoz"] = deepcopy(empty_gridbackend)
-    for column_name in column_names
-        (column_name == "rho") && continue
-        Result_dict[column_name] = deepcopy(empty_gridbackend)
+    if columnNotEmpty
+        for column_name in column_names
+            (column_name == "rho") && continue
+            Result_dict[column_name] = deepcopy(empty_gridbackend)
+        end
+    end
+    if gradcolumnNotEmpty
+        for column_name in gradient_column_names
+            (column_name == "rho") && continue
+            Result_dict["∇$(column_name)s"] = deepcopy(empty_gridbackend)
+            Result_dict["∇$(column_name)ϕ"] = deepcopy(empty_gridbackend)
+            Result_dict["∇$(column_name)z"] = deepcopy(empty_gridbackend)
+        end
+    end
+    if divercolumnNotEmpty
+        for column_name in divergence_column_names
+            (column_name == "rho") && continue
+            Result_dict["∇⋅$(column_name)"] = deepcopy(empty_gridbackend)
+        end
+    end
+    if curlcolumnNotEmpty
+        for column_name in curl_column_names
+            (column_name == "rho") && continue
+            Result_dict["∇×$(column_name)s"] = deepcopy(empty_gridbackend)
+            Result_dict["∇×$(column_name)ϕ"] = deepcopy(empty_gridbackend)
+            Result_dict["∇×$(column_name)z"] = deepcopy(empty_gridbackend)
+        end
     end
 
     # Prepare a roughly truncate radius for KD-tree filtering.
     roughly_truncated_radius::Float64 =
-        get_truncated_radius(data, -1.0f0, 0.5, smoothed_kernal)
+        get_truncated_radius(data, -1.0f0, 0.5, smoothed_kernel)
     # Iteration
-    for i in eachindex(gridv)
+    @threads for i in eachindex(gridv)
         target = gridv[i]
         kdtf_data = KDtree_filter(data, kdtree3d, target, roughly_truncated_radius, "polar") # New data that has been filtered.
         Result_dict["rho"].grid[i] = wrap_dens(kdtf_data, target)
@@ -135,14 +263,57 @@ function Disk_3D_Grid_analysis(
         Result_dict["∇rhos"].grid[i] = ∇dens[1]
         Result_dict["∇rhoϕ"].grid[i] = ∇dens[2]
         Result_dict["∇rhoz"].grid[i] = ∇dens[3]
-        quantity_interpolation_dict::Dict{String,Float64} = wrap_quant(kdtf_data, target)
-        if all(key -> haskey(Result_dict, key), keys(quantity_interpolation_dict))
-            for key in keys(quantity_interpolation_dict)
-                Result_dict[key].grid[i] = quantity_interpolation_dict[key]
+        if columnNotEmpty
+            quantity_interpolation_dict::Dict{String,Float64} = wrap_quant(kdtf_data, target)
+            if all(key -> haskey(Result_dict, key), keys(quantity_interpolation_dict))
+                for key in keys(quantity_interpolation_dict)
+                    Result_dict[key].grid[i] = quantity_interpolation_dict[key]
+                end
+            else
+                error("IntepolateError: Missing column name!")
             end
-        else
-            error("IntepolateError: Missing column name!")
+        end 
+        if gradcolumnNotEmpty
+            input_density = Result_dict["rho"].grid[i]
+            grad_quantity_interpolation_dict::Dict{String,Float64} = Dict{String,Float64}()
+            for n in eachindex(gradient_column_names)
+                column_name = gradient_column_names[n]
+                input_value = nothing
+                if grad_value_exist[n]
+                    input_value = Result_dict[column_name].grid[i]
+                end
+                buffer_array = wrap_gradquant(kdtf_data, target,column_name,input_density,input_value)
+                grad_quantity_interpolation_dict["∇$(column_name)s"],grad_quantity_interpolation_dict["∇$(column_name)ϕ"],grad_quantity_interpolation_dict["∇$(column_name)z"] = buffer_array
+            end
+            if all(key -> haskey(Result_dict, key), keys(grad_quantity_interpolation_dict))
+                for key in keys(grad_quantity_interpolation_dict)
+                    Result_dict[key].grid[i] = grad_quantity_interpolation_dict[key]
+                end
+            else
+                error("IntepolateError: Missing column name!")
+            end
         end
+        if curlcolumnNotEmpty
+            input_density = Result_dict["rho"].grid[i]
+            curl_quantity_interpolation_dict::Dict{String,Float64} = Dict{String,Float64}()
+            for n in eachindex(curl_column_names)
+                column_name = curl_column_names[n]
+                input_value = nothing
+                # if curl_value_exist[n]
+                #     input_value = Result_dict[column_name].grid[i]
+                # end
+                buffer_array = wrap_curlquant(kdtf_data, target,column_name,input_density,input_value)
+                curl_quantity_interpolation_dict["∇×$(column_name)s"],curl_quantity_interpolation_dict["∇×$(column_name)ϕ"],curl_quantity_interpolation_dict["∇×$(column_name)z"] = buffer_array
+            end
+            if all(key -> haskey(Result_dict, key), keys(curl_quantity_interpolation_dict))
+                for key in keys(curl_quantity_interpolation_dict)
+                    Result_dict[key].grid[i] = curl_quantity_interpolation_dict[key]
+                end
+            else
+                error("IntepolateError: Missing column name!")
+            end
+        end  
+
     end
 
     @info "End 3D disk grid analysis."
@@ -183,7 +354,7 @@ function Disk_scale_height_analysis(edgeon_data_3D :: Dict{String, gridbackend})
 end
 
 """
-    Disk_scale_height_analysis(data::PhantomRevealerDataFrame, s_params::Tuple{Float64,Float64,Int}, ϕ_params :: Tuple{Float64,Float64,Int} = (0.0,2π,8) ,z_params::Tuple{Float64,Float64,Int} = (0.0, 28.0, 70),smoothed_kernal:: Function = M5_spline,h_mode::String="closest")
+    Disk_scale_height_analysis(data::PhantomRevealerDataFrame, s_params::Tuple{Float64,Float64,Int}, ϕ_params :: Tuple{Float64,Float64,Int} = (0.0,2π,8) ,z_params::Tuple{Float64,Float64,Int} = (0.0, 28.0, 70),smoothed_kernel:: Function = M5_spline,h_mode::String="closest")
 Calculate the scale height of disk.
 
 # Parameters
@@ -191,7 +362,7 @@ Calculate the scale height of disk.
 - `s_params :: Tuple{Float64,Float64,Int}`: The radial parameters with [smin, smax, sn]
 - `ϕ_params :: Tuple{Float64,Float64,Int}`: The azimuthal parameters with [ϕmin, ϕmax, ϕn]
 - `z_params :: Tuple{Float64,Float64,Int}`: The height parameters with [zmin, zmax, zn]
-- `smoothed_kernal :: Function = M5_spline`: The Kernel function for interpolation.
+- `smoothed_kernel :: Function = M5_spline`: The Kernel function for interpolation.
 - `h_mode :: String="closest"`: The mode for finding a proper smoothed radius. (Allowed value: "closest", "mean")
 
 # Returns
@@ -202,7 +373,7 @@ function Disk_scale_height_analysis(
     s_params::Tuple{Float64,Float64,Int},
     ϕ_params::Tuple{Float64,Float64,Int} = (0.0, 2π, 8),
     z_params::Tuple{Float64,Float64,Int} = (0.0, 28.0, 70),
-    smoothed_kernal::Function = M5_spline,
+    smoothed_kernel::Function = M5_spline,
     h_mode::String = "closest";
     Identical_particles::Bool=true
 )
@@ -211,9 +382,8 @@ function Disk_scale_height_analysis(
         s_params,
         ϕ_params,
         z_params,
-        Vector{String}(),
-        smoothed_kernal,
-        h_mode,
+        smoothed_kernel=smoothed_kernel,
+        h_mode=h_mode,
         Identical_particles=Identical_particles
     )
     result = Disk_scale_height_analysis(edgeon_data_3D)
@@ -226,6 +396,7 @@ Generate an function f(s,ϕ) which represent the midplane of the disk.
 
 # Parameters
 - `edgeon_data_3D :: Dict{String, gridbackend}`: The result from a edge-on analysis.
+- `azimuthal_circular :: Bool = true`: Boolean of a circular azimuthal grid.
 
 # Returns
 - `Interpolations.Extrapolation`: The interpolation object of midplane as the function of `s` and `ϕ`.
@@ -257,7 +428,7 @@ end
         s_params::Tuple{Float64,Float64,Int} = (10.0, 120.0, 111),
         ϕ_params::Tuple{Float64,Float64,Int} = (0.0, 2π, 24),
         z_params::Tuple{Float64,Float64,Int} = (-28.0, 28.0, 100),
-        smoothed_kernal::Function = M5_spline,
+        smoothed_kernel::Function = M5_spline,
         h_mode::String = "closest"
     )
 Generate an function f(s,ϕ) which represent the midplane of the disk.
@@ -267,8 +438,11 @@ Generate an function f(s,ϕ) which represent the midplane of the disk.
 - `s_params :: Tuple{Float64,Float64,Int}`: The radial parameters with [smin, smax, sn]
 - `ϕ_params :: Tuple{Float64,Float64,Int}`: The azimuthal parameters with [ϕmin, ϕmax, ϕn]
 - `z_params :: Tuple{Float64,Float64,Int}`: The height parameters with [zmin, zmax, zn]
-- `smoothed_kernal :: Function = M5_spline`: The Kernel function for interpolation.
+
+# Keyword Arguments
+- `smoothed_kernel :: Function = M5_spline`: The Kernel function for interpolation.
 - `h_mode :: String="closest"`: The mode for finding a proper smoothed radius. (Allowed value: "closest", "mean")
+- `Identical_particles :: Bool = true`: Whether the particles are identical (default: `true`).
 
 # Returns
 - `Interpolations.Extrapolation`: The interpolation object of midplane as the function of `s` and `ϕ`.
@@ -277,9 +451,9 @@ function Disk_2D_midplane_function_generator(
     data::PhantomRevealerDataFrame,
     s_params::Tuple{Float64,Float64,Int} = (10.0, 120.0, 111),
     ϕ_params::Tuple{Float64,Float64,Int} = (0.0, 2π, 24),
-    z_params::Tuple{Float64,Float64,Int} = (-28.0, 28.0, 100),
-    smoothed_kernal::Function = M5_spline,
-    h_mode::String = "closest";
+    z_params::Tuple{Float64,Float64,Int} = (-28.0, 28.0, 100);
+    smoothed_kernel::Function = M5_spline,
+    h_mode::String = "closest",
     Identical_particles::Bool=true
 )
     edgeon_data_3D = Disk_3D_Grid_analysis(
@@ -287,9 +461,8 @@ function Disk_2D_midplane_function_generator(
         s_params,
         ϕ_params,
         z_params,
-        Vector{String}(),
-        smoothed_kernal,
-        h_mode,
+        smoothed_kernel=smoothed_kernel,
+        h_mode=h_mode,
         Identical_particles=Identical_particles
     )
     if ϕ_params[2] == 2π
@@ -302,82 +475,89 @@ function Disk_2D_midplane_function_generator(
 end
 
 """
-    Disk_2D_FaceOn_Grid_analysis(data::PhantomRevealerDataFrame ,s_params::Tuple{Float64,Float64,Int} ,ϕ_params :: Tuple{Float64,Float64,Int}, 
-    column_names::Vector{String}, mid_column_names::Vector{String}, 
-    midz_func::Interpolations.Extrapolation,
-    smoothed_kernal:: Function = M5_spline,h_mode::String="closest")
-Calculate the SPH interpolation on a Face-on grid that is described as a polar coordinate (s,ϕ) for a disk.
+    Disk_2D_FaceOn_Grid_analysis(
+        data::PhantomRevealerDataFrame,
+        s_params::Tuple{Float64,Float64,Int},
+        ϕ_params::Tuple{Float64,Float64,Int};
+        column_names::Union{Nothing,Vector{String}}=nothing,
+        mid_column_names::Union{Nothing,Vector{String}}=nothing,
+        midz_func::Union{Nothing,Interpolations.Extrapolation}=nothing,
+        smoothed_kernel::Function = M5_spline,
+        h_mode::String = "closest",
+        Identical_particles::Bool = true
+    )
+Calculate the SPH interpolation on a face-on grid described in polar coordinates (s,ϕ) for a disk.
 
-Note: The grident values of arbitary quantities haven't supported yet!
+Note: The gradient values of arbitrary quantities are not yet supported.
 
-The surface density `Sigma` and its grident vector `∇Sigma` would be calculated automatically. The `∇Sigma` would be in polar/cylindrical coordinate (∇Sigmas, ∇Sigmaϕ)
+The surface density `Sigma` and its gradient vector `∇Sigma` will be calculated automatically. The `∇Sigma` values are returned in polar/cylindrical coordinates (∇Sigma_s, ∇Sigma_ϕ).
 
-For those quantities that calculate by taking average in mid-plane would have a suffix `m`. e.g rhom, vsm,...
-
-h_mode: 
-"closest": Choose h of the closest particles.
-"mean": use the mean value of h in the data.
+For quantities calculated using mid-plane averages, the results will have a suffix `m`. For example, `rho` becomes `rhom`, `vs` becomes `vsm`, etc.
 
 # Parameters
-- `data :: PhantomRevealerDataFrame`: The SPH data that is stored in `PhantomRevealerDataFrame` 
-- `s_params :: Tuple{Float64,Float64,Int}`: The radial parameters with [smin, smax, sn]
-- `ϕ_params :: Tuple{Float64,Float64,Int}`: The azimuthal parameters with [ϕmin, ϕmax, ϕn]
-- `column_names :: Vector{String}`: The quantities that would be interpolated.
-- `mid_column_names :: Vector{String}`: The quantities that would be evaluated by taking the midplane average.
-- `midz_func :: Interpolations.Extrapolation`: The interpolation object of scale height as the function of `s`
-- `smoothed_kernal :: Function = M5_spline`: The Kernel function for interpolation.
-- `h_mode :: String="closest"`: The mode for finding a proper smoothed radius. (Allowed value: "closest", "mean")
+- `data :: PhantomRevealerDataFrame`: The SPH data stored in `PhantomRevealerDataFrame`. 
+- `s_params :: Tuple{Float64,Float64,Int}`: The radial parameters [smin, smax, sn].
+- `ϕ_params :: Tuple{Float64,Float64,Int}`: The azimuthal parameters [ϕmin, ϕmax, ϕn].
+
+# Keyword Arguments
+- `column_names :: Union{Nothing,Vector{String}}=nothing`: The quantities to interpolate. If `nothing`, only density-related values will be interpolated.
+- `mid_column_names :: Union{Nothing,Vector{String}}=nothing`: Quantities to evaluate by taking mid-plane averages.
+- `midz_func :: Union{Nothing,Interpolations.Extrapolation}=nothing`: The interpolation function for the z-component of midplane `H_mid(s)`.
+- `smoothed_kernel :: Function = M5_spline`: The kernel function for SPH interpolation.
+- `h_mode :: String="closest"`: The mode for determining the smoothing radius. Allowed values are `"closest"` and `"mean"`.
+- `Identical_particles :: Bool = true`: Whether the particles are identical (default: `true`).
 
 # Returns
-- `Dict{String, gridbackend}`: The dictionary that contains all of the result by the form `gridbackend`.
+- `Dict{String, gridbackend}`: A dictionary containing the interpolated results in the form of `gridbackend`.
 
 # Examples
 ```julia
-# Preparation
-prdf_list :: Vector = read_phantom("./temp/st15co_00107", "all");
-COM2star!(prdf_list, prdf_list[end],1);
-data :: PhantomRevealerDataFrame = prdf_list[1];
-add_cylindrical!(data);
-add_eccentricity!(data);
-sparams :: Tuple{Float64,Float64,Int} = (10.0,100.0,91);
-ϕparams :: Tuple{Float64,Float64,Int} = (0.0,2π,12);
-smoothed_kernal :: Function = M6_spline;
-hmode :: String = "closest";
+data :: PhantomRevealerDataFrame = read_phantom("./temp/st15co_00107", "all")[1]
+add_cylindrical!(data)
+s_params :: Tuple{Float64,Float64,Int} = (10.0,100.0,91)
+ϕ_params :: Tuple{Float64,Float64,Int} = (0.0,2π,12)
+smoothed_kernel :: Function = M6_spline
+midz_func = Disk_2D_midplane_function_generator(data, s_params)
 
-midz_func = Disk_2D_midplane_function_generator(data, sparams);
+column_names :: Vector = ["e"]
+mid_column_names :: Vector = ["rho", "vs", "vϕ"]
 
-column_names :: Vector = ["e"];
-mid_column_names :: Vector = ["rho", "vs", "vϕ"];
-result1 :: Dict{String, gridbackend} = Disk_2D_FaceOn_Grid_analysis(data, sparams, ϕparams, column_names, mid_column_names, midz_func, smoothed_kernal, hmode);
-println(keys(result1)) # Print out ["Sigma", "∇Sigmas", "∇Sigmaϕ", "e", "rhom", "vsm", "vϕm"];
+result :: Dict{String, gridbackend} = Disk_2D_FaceOn_Grid_analysis(
+    data, s_params, ϕ_params;
+    column_names=column_names,
+    mid_column_names=mid_column_names,
+    midz_func=midz_func,
+    smoothed_kernel=smoothed_kernel
+)
+println(keys(result))  # Output: ["Sigma", "∇Sigmas", "∇Sigmaϕ", "e", "rhom", "vsm", "vϕm"]
 ```
 """
 function Disk_2D_FaceOn_Grid_analysis(
     data::PhantomRevealerDataFrame,
     s_params::Tuple{Float64,Float64,Int},
-    ϕ_params::Tuple{Float64,Float64,Int},
-    column_names::Vector{String},
-    mid_column_names::Vector{String},
-    midz_func::Interpolations.Extrapolation,
-    smoothed_kernal::Function = M5_spline,
-    h_mode::String = "closest";
+    ϕ_params::Tuple{Float64,Float64,Int};
+    column_names::Union{Nothing,Vector{String}}=nothing,
+    mid_column_names::Union{Nothing,Vector{String}}=nothing,
+    midz_func::Union{Nothing,Interpolations.Extrapolation}=nothing,
+    smoothed_kernel::Function = M5_spline,
+    h_mode::String = "closest",
     Identical_particles::Bool=true
 )
     function wrap_surf_dens(data::PhantomRevealerDataFrame, point::Array)::Float64
-        return surface_density(data, point, smoothed_kernal, h_mode, "polar",Identical_particles=Identical_particles)
+        return surface_density(data, point, smoothed_kernel, h_mode, "polar",Identical_particles=Identical_particles)
     end
     function wrap_grad_surf_dens(
         data::PhantomRevealerDataFrame,
         point::Array,
     )::Vector{Float64}
-        return gradient_surface_density(data, point, smoothed_kernal, h_mode, "polar",Identical_particles=Identical_particles)
+        return gradient_surface_density(data, point, smoothed_kernel, h_mode, "polar",Identical_particles=Identical_particles)
     end
     function wrap_quant(data::PhantomRevealerDataFrame, point::Array)::Dict{String,Float64}
         return quantity_intepolate(
             data,
             point,
             mid_column_names,
-            smoothed_kernal,
+            smoothed_kernel,
             h_mode,
             "polar",
             Identical_particles=Identical_particles
@@ -393,7 +573,7 @@ function Disk_2D_FaceOn_Grid_analysis(
             point,
             Sigmai,
             column_names,
-            smoothed_kernal,
+            smoothed_kernel,
             h_mode,
             "polar",
             Identical_particles=Identical_particles
@@ -404,21 +584,41 @@ function Disk_2D_FaceOn_Grid_analysis(
     add_necessary_quantity!(data)
 
     # Checking data before interpolation
+    ###############################
+    # Checking the necessity of intepolation
+    # Regular intepolation
+    columnNotEmpty = true
+    if isnothing(column_names)
+        columnNotEmpty = false
+    elseif isempty(column_names)
+        columnNotEmpty = false
+    end
+    # Midplane intepolation
+    midcolumnNotEmpty = true
+    if isnothing(mid_column_names)
+        midcolumnNotEmpty = false
+    elseif isempty(mid_column_names)
+        columnNotEmpty = false
+    end
     if (data.params["Origin_sink_id"] == -1)
         error("IntepolateError: Wrong origin located!")
     end
+    ###############################
 
-    for column_name in column_names
-        if !(hasproperty(data.dfdata, column_name))
-            error("IntepolateError: Missing column name $column_name !")
+    if columnNotEmpty
+        for column_name in column_names
+            if !(hasproperty(data.dfdata, column_name))
+                error("IntepolateError: Missing column name $column_name !")
+            end
         end
     end
-    for column_name in mid_column_names
-        if !(hasproperty(data.dfdata, column_name))
-            error("IntepolateError: Missing column name $column_name !")
+    if midcolumnNotEmpty
+        for column_name in mid_column_names
+            if !(hasproperty(data.dfdata, column_name))
+                error("IntepolateError: Missing column name $column_name !")
+            end
         end
     end
-
     # Generate kd tree
     kdtree3d = Generate_KDtree(data, 3)
     kdtree2d = Generate_KDtree(data, 2)
@@ -426,8 +626,8 @@ function Disk_2D_FaceOn_Grid_analysis(
     # Generate Face-on grid 
     imin::Vector = [s_params[1], ϕ_params[1]]
     imax::Vector = [s_params[2], ϕ_params[2]]
-    in::Vector = [s_params[3], ϕ_params[3]]
-    empty_gridbackend::gridbackend = disk_2d_grid_generator(imin, imax, in)
+    iaxen::Vector = [s_params[3], ϕ_params[3]]
+    empty_gridbackend::gridbackend = disk_2d_grid_generator(imin, imax, iaxen)
 
     # Generate the coordinate array for the grid interpolation
     gridv::Array{Vector{Float64}} = generate_coordinate_grid(empty_gridbackend)
@@ -437,18 +637,22 @@ function Disk_2D_FaceOn_Grid_analysis(
     Result_dict["Sigma"] = deepcopy(empty_gridbackend)
     Result_dict["∇Sigmas"] = deepcopy(empty_gridbackend)
     Result_dict["∇Sigmaϕ"] = deepcopy(empty_gridbackend)
-    for column_name in column_names
-        (column_name == "Sigma") && continue
-        Result_dict[column_name] = deepcopy(empty_gridbackend)
+    if columnNotEmpty
+        for column_name in column_names
+            (column_name == "Sigma") && continue
+            Result_dict[column_name] = deepcopy(empty_gridbackend)
+        end
     end
-    imid_column_names = mid_column_names .* "m"
-    for column_name in imid_column_names
-        Result_dict[column_name] = deepcopy(empty_gridbackend)
+    if midcolumnNotEmpty
+        imid_column_names = mid_column_names .* "m"
+        for column_name in imid_column_names
+            Result_dict[column_name] = deepcopy(empty_gridbackend)
+        end
     end
 
     # Prepare a roughly truncate radius for KD-tree filtering.
     roughly_truncated_radius::Float64 =
-        get_truncated_radius(data, -1.0f0, 0.5, smoothed_kernal)
+        get_truncated_radius(data, -1.0f0, 0.5, smoothed_kernel)
 
     # Iteration
     @threads for i in eachindex(gridv)
@@ -461,26 +665,30 @@ function Disk_2D_FaceOn_Grid_analysis(
         ∇dens = wrap_grad_surf_dens(kdtf_data2d, target)
         Result_dict["∇Sigmas"].grid[i] = ∇dens[1]
         Result_dict["∇Sigmaϕ"].grid[i] = ∇dens[2]
-        quantity_interpolation_dict::Dict{String,Float64} = wrap_quant2D(kdtf_data2d, target, Sigmai)
-        if all(key -> haskey(Result_dict, key), keys(quantity_interpolation_dict))
-            for key in keys(quantity_interpolation_dict)
-                Result_dict[key].grid[i] = quantity_interpolation_dict[key]
+        if columnNotEmpty
+            quantity_interpolation_dict::Dict{String,Float64} = wrap_quant2D(kdtf_data2d, target, Sigmai)
+            if all(key -> haskey(Result_dict, key), keys(quantity_interpolation_dict))
+                for key in keys(quantity_interpolation_dict)
+                    Result_dict[key].grid[i] = quantity_interpolation_dict[key]
+                end
+            else
+                error("IntepolateError: Missing column name!")
             end
-        else
-            error("IntepolateError: Missing column name!")
         end
         # 3D midplane intepolation
-        midz = midz_func(target...)
-        if midz == NaN64
-            for j in eachindex(mid_column_names)
-                Result_dict[imid_column_names[j]].grid[i] = NaN64
-            end
-        else
-            target3D = [target..., midz]
-            kdtf_data3d = KDtree_filter(data, kdtree3d, target3D, roughly_truncated_radius, "polar") # New data that has been filtered.
-            mid_interpolation_dict::Dict{String,Float64} = wrap_quant(kdtf_data3d, target3D)
-            for j in eachindex(mid_column_names)
-                Result_dict[imid_column_names[j]].grid[i] = mid_interpolation_dict[mid_column_names[j]]
+        if midcolumnNotEmpty
+            midz = midz_func(target...)
+            if midz == NaN64
+                for j in eachindex(mid_column_names)
+                    Result_dict[imid_column_names[j]].grid[i] = NaN64
+                end
+            else
+                target3D = [target..., midz]
+                kdtf_data3d = KDtree_filter(data, kdtree3d, target3D, roughly_truncated_radius, "polar") # New data that has been filtered.
+                mid_interpolation_dict::Dict{String,Float64} = wrap_quant(kdtf_data3d, target3D)
+                for j in eachindex(mid_column_names)
+                    Result_dict[imid_column_names[j]].grid[i] = mid_interpolation_dict[mid_column_names[j]]
+                end
             end
         end
         
@@ -490,35 +698,38 @@ function Disk_2D_FaceOn_Grid_analysis(
 end
 
 """
-    gridbackend_Grid_analysis(data::PhantomRevealerDataFrame,grid::gridbackend,column_names::Vector{String},smoothed_kernal::Function = M5_spline,h_mode::String = "closest",coordinate_flag:: String = "cart")
-Calculate the SPH interpolation on a given grid that is described as `gridbackend`.
-
-h_mode: 
-"closest": Choose h of the closest particles.
-"mean": use the mean value of h in the data.
-
-coordinate_flag: 
-"cart": Cartesian coodinate
-"polar": Polar/Cylindrical coordinate
+    gridbackend_Grid_analysis(
+        data::PhantomRevealerDataFrame,
+        grid::gridbackend;
+        column_names::Union{Nothing,Vector{String}}=nothing,
+        smoothed_kernel::Function = M5_spline,
+        h_mode::String = "closest",
+        coordinate_flag::String = "cart",
+        Identical_particles::Bool = true
+    )
+Calculate SPH interpolation on a given grid described as `gridbackend`.
 
 # Parameters
-- `data :: PhantomRevealerDataFrame`: The SPH data that is stored in `PhantomRevealerDataFrame` 
-- `grid :: gridbackend`: The grid. 
-- `column_names :: Vector{String}`: The quantities that would be interpolated.
-- `smoothed_kernal :: Function = M5_spline`: The Kernel function for interpolation.
-- `h_mode :: String = "closest"`: The mode for finding a proper smoothed radius. (Allowed value: "closest", "mean")
-- `coordinate_flag :: String = "cart": The coordinate system that is used for given the target. (Allowed value: "cart", "polar")
+- `data :: PhantomRevealerDataFrame`: The SPH data stored in `PhantomRevealerDataFrame`. 
+- `grid :: gridbackend`: The grid for interpolation.
+
+# Keyword Arguments
+- `column_names :: Union{Nothing,Vector{String}}=nothing`: The quantities to interpolate. If `nothing`, only density is calculated.
+- `smoothed_kernel :: Function = M5_spline`: The kernel function for SPH interpolation.
+- `h_mode :: String = "closest"`: The mode for determining the smoothing radius. Allowed values are `"closest"` and `"mean"`.
+- `coordinate_flag :: String = "cart"`: The coordinate system used for target points. Allowed values are `"cart"` and `"polar"`.
+- `Identical_particles :: Bool = true`: Whether the particles are identical (default: `true`).
 
 # Returns
-- `Dict{String, gridbackend}`: The dictionary that contains all of the result by the form `gridbackend`.
+- `Dict{String, gridbackend}`: A dictionary containing the interpolated results in the form of `gridbackend`.
 """
 function gridbackend_Grid_analysis(
     data::PhantomRevealerDataFrame,
-    grid::gridbackend,
-    column_names::Vector{String},
-    smoothed_kernal::Function = M5_spline,
+    grid::gridbackend;
+    column_names::Union{Nothing,Vector{String}}=nothing,
+    smoothed_kernel::Function = M5_spline,
     h_mode::String = "closest",
-    coordinate_flag:: String = "cart";
+    coordinate_flag:: String = "cart",
     Identical_particles::Bool=true
 )   
     function generate_functions(grid_dimension::Int)
@@ -527,7 +738,7 @@ function gridbackend_Grid_analysis(
             kdtree = Generate_KDtree(data, 2)
             
             wrap_dens = (data, point) -> begin
-                surface_density(data, point, smoothed_kernal, h_mode, coordinate_flag,Identical_particles=Identical_particles)
+                surface_density(data, point, smoothed_kernel, h_mode, coordinate_flag,Identical_particles=Identical_particles)
             end
             
             wrap_quant = (data, point, deni) -> begin
@@ -536,7 +747,7 @@ function gridbackend_Grid_analysis(
                     point,
                     deni,
                     column_names,
-                    smoothed_kernal,
+                    smoothed_kernel,
                     h_mode,
                     coordinate_flag,
                     Identical_particles=Identical_particles
@@ -550,7 +761,7 @@ function gridbackend_Grid_analysis(
             kdtree = Generate_KDtree(data, 3)
             
             wrap_dens = (data, point) -> begin
-                density(data, point, smoothed_kernal, h_mode, coordinate_flag,Identical_particles=Identical_particles)
+                density(data, point, smoothed_kernel, h_mode, coordinate_flag,Identical_particles=Identical_particles)
             end
 
             wrap_quant = (data, point, deni) -> begin
@@ -558,7 +769,7 @@ function gridbackend_Grid_analysis(
                     data,
                     point,
                     column_names,
-                    smoothed_kernal,
+                    smoothed_kernel,
                     h_mode,
                     coordinate_flag,
                     Identical_particles=Identical_particles
@@ -587,7 +798,7 @@ function gridbackend_Grid_analysis(
 
     # Prepare a roughly truncate radius for KD-tree filtering.
     roughly_truncated_radius::Float64 =
-        get_truncated_radius(data, -1.0f0, 0.5, smoothed_kernal)
+        get_truncated_radius(data, -1.0f0, 0.5, smoothed_kernel)
 
     # Iteration
     @threads for i in eachindex(gridv)

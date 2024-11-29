@@ -100,7 +100,7 @@ Gather analysis information about a file.
 function get_analysis_info(filepath::String)
     log_info = Dict{String,Any}()
     log_info["Analysis Date"] = today()
-    log_info["System Kernal"] = Sys.KERNEL
+    log_info["System kernel"] = Sys.KERNEL
     log_info["File path"] = filepath
     log_info["Filesize (MB)"] = (filesize(filepath) / (1024 * 1024))
     return log_info

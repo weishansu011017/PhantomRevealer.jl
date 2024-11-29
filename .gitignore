@@ -39,3 +39,6 @@ Fully_analysis_disk.jl
 # Subjob
 subjobJ.sh
 subjobJ64.sh
+
+# Matlab
+script/*.m

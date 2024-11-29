@@ -49,7 +49,7 @@ IMPORTANT: Personally, I will NOT recommend using M4 spline function since M4 ma
 # M4 B-spline
 function M4_spline(q)
     if 0 <= q < 1
-        return (1 - (1.5 * q) + 0.75 * (q^3))
+        return (0.25 * (2 - q)^3 - (1 - q)^3)
     elseif 1 <= q < 2
         return (0.25 * (2 - q)^3)
     elseif q >= 2
@@ -239,6 +239,20 @@ const _DKERNEL = Dict(
     :C6_Wendland => _dC6_Wendland,
 )
 
+
+"""
+    _Nneigh
+The mean neighbour number of kernel provided by Price et al.(2018).
+"""
+const _Nneigh = Dict(
+    :M4_spline => 57,
+    :M5_spline => 113,
+    :M6_spline => 112,
+    :C2_Wendland => 92,
+    :C4_Wendland => 137,
+    :C6_Wendland => 356,
+)
+
 """
     function KernelFunctionValid()
 Call the dictionary of truncated radius of kernel function.
@@ -293,8 +307,78 @@ function KernelFunctionDiff()
     return _DKERNEL
 end
 
+"""
+    function KernelFunctioNneigh()
+Call the mean neighbour number of kernel function.
+
+# Returns
+- _Nneigh
+
+# Examples
+```julia
+Nneigh = KernelFunctionNneigh()[:M4_spline]
+println(Nneigh) 
+>> 58
+```
+"""
+function KernelFunctionNneigh()
+    return _Nneigh
+end
+
 # Calculating influence by Smoothed Function
 # W(ra-rb,h)
+"""
+    function Smoothed_kernel_function_dimensionless(f::Function, h::Union{Float32,Float64}, ra::Vector, rb::Vector)
+
+Calculating dimensionless part of W(ra-rb,h).
+
+# Parameters
+- `f::Function`: Kernel function. 
+- `h::Union{Float32,Float64}`: Smoothed length.
+- `ra::Vector`: Position a in Vector.
+- `rb::Vector`: Position b in Vector.
+
+# Returns
+- `Float64`: W(ra-rb,h)
+"""
+function Smoothed_kernel_function_dimensionless(
+    f::Function,
+    h::Union{Float32,Float64},
+    ra::Vector,
+    rb::Vector,
+)
+    r::Float64 = norm(ra - rb)
+    q::Float64 = r / h
+    dim::Int32 = length(ra)
+    influence::Float64 = f(q) * KernelFunctionnorm()[nameof(f)][dim]
+    return influence
+end
+
+"""
+    function Smoothed_kernel_function_dimensionless(f::Function, h::Union{Float32,Float64}, r::Float64, dim::Int)
+
+Calculating dimensionless part of W(ra-rb,h).
+
+# Parameters
+- `f::Function`: Kernel function. 
+- `h::Union{Float32,Float64}`: Smoothed length.
+- `r::Float64`: The geometric distance bewteen ra and rb.
+- `dim:Int`: The dimension for calculating.
+
+# Returns
+- `Float64`: W(ra-rb,h)
+"""
+function Smoothed_kernel_function_dimensionless(
+    f::Function,
+    h::Union{Float32,Float64},
+    r::Float64,
+    dim::Int,
+)
+    q::Float64 = r / h
+    influence::Float64 = f(q) * KernelFunctionnorm()[nameof(f)][dim]
+    return influence
+end
+
 """
     function Smoothed_kernel_function(f::Function, h::Union{Float32,Float64}, ra::Vector, rb::Vector)
 
@@ -314,12 +398,10 @@ function Smoothed_kernel_function(
     h::Union{Float32,Float64},
     ra::Vector,
     rb::Vector,
-)
-    r::Float64 = norm(ra - rb)
-    q::Float64 = r / h
+)  
     dim::Int32 = length(ra)
     hr::Float64 = h^(-dim)
-    influence::Float64 = hr * f(q) * KernelFunctionnorm()[nameof(f)][dim]
+    influence::Float64 = hr * Smoothed_kernel_function_dimensionless(f,h,ra,rb)
     return influence
 end
 
@@ -345,13 +427,69 @@ function Smoothed_kernel_function(
 )
     q::Float64 = r / h
     hr::Float64 = h^(-dim)
-    influence::Float64 = hr * f(q) * KernelFunctionnorm()[nameof(f)][dim]
+    influence::Float64 = hr * Smoothed_kernel_function_dimensionless(f,h,r,dim)
     return influence
 end
 
 # ∇W(ra-rb,h)
 """
-    function Smoothed_greident_kernel_function(f::Function, h::Union{Float32,Float64}, ra::Vector, rb::Vector)
+    Smoothed_greident_kernel_function_dimensionless(f::Function, h::Union{Float32,Float64}, ra::Vector, rb::Vector)
+
+Calculating dimensionless part of ∇W(ra-rb,h).
+
+# Parameters
+- `f::Function`: Kernel function. 
+- `h::Union{Float32,Float64}`: Smoothed length.
+- `ra::Vector`: Position a in Vector.
+- `rb::Vector`: Position b in Vector.
+
+# Returns
+- `Vector`: ∇W(ra-rb,h)
+"""
+function Smoothed_greident_kernel_function_dimensionless(
+    f::Function,
+    h::Union{Float32,Float64},
+    ra::Vector,
+    rb::Vector,
+)
+    rab::Vector = ra - rb
+    hatrab::Vector = rab ./ norm(rab)
+    q::Float64 = norm(rab) / h
+    dim::Int32 = length(rab)
+    F_ab::Float64 =
+        KernelFunctionDiff()[nameof(f)](q) * KernelFunctionnorm()[nameof(f)][dim]
+    influence::Vector = hatrab .* F_ab
+    return influence
+end
+
+"""
+    Smoothed_greident_kernel_function_dimensionless(f::Function, h::Union{Float32,Float64}, rab::Vector)
+
+Calculating dimensionless part of ∇W(ra-rb,h).
+
+# Parameters
+- `f::Function`: Kernel function. 
+- `h::Union{Float32,Float64}`: Smoothed length.
+- `rab::Vector`: Vector of ra-rb
+
+# Returns
+- `Vector`: ∇W(ra-rb,h)
+"""
+function Smoothed_greident_kernel_function_dimensionless(
+    f::Function,
+    h::Union{Float32,Float64},
+    rab::Vector,
+)
+    hatrab::Vector = rab ./ norm(rab)
+    q::Float64 = norm(rab) / h
+    dim::Int32 = length(rab)
+    F_ab::Float64 =
+        KernelFunctionDiff()[nameof(f)](q) * KernelFunctionnorm()[nameof(f)][dim]
+    influence::Vector = hatrab .* F_ab
+    return influence
+end
+"""
+    Smoothed_greident_kernel_function(f::Function, h::Union{Float32,Float64}, ra::Vector, rb::Vector)
 
 Calculating ∇W(ra-rb,h).
 
@@ -370,14 +508,9 @@ function Smoothed_greident_kernel_function(
     ra::Vector,
     rb::Vector,
 )
-    rab::Vector = ra - rb
-    hatrab::Vector = rab ./ norm(rab)
-    q::Float64 = norm(rab) / h
     dim::Int32 = length(rab)
     hr::Float64 = h^(-(dim + 1))
-    F_ab::Float64 =
-        hr * KernelFunctionDiff()[nameof(f)](q) * KernelFunctionnorm()[nameof(f)][dim]
-    influence::Vector = hatrab .* F_ab
+    influence::Vector = hr .* Smoothed_greident_kernel_function_dimensionless(f,h,ra,rb)
     return influence
 end
 
@@ -399,13 +532,9 @@ function Smoothed_greident_kernel_function(
     h::Union{Float32,Float64},
     rab::Vector,
 )
-    hatrab::Vector = rab ./ norm(rab)
-    q::Float64 = norm(rab) / h
     dim::Int32 = length(rab)
     hr::Float64 = h^(-(dim + 1))
-    F_ab::Float64 =
-        hr * KernelFunctionDiff()[nameof(f)](q) * KernelFunctionnorm()[nameof(f)][dim]
-    influence::Vector = hatrab .* F_ab
+    influence::Vector = hr .* Smoothed_greident_kernel_function_dimensionless(f,h,rab)
     return influence
 end
 
@@ -467,5 +596,65 @@ function Smoothed_dh_kernel_function(
         -hr *
         (3 * f(q) + q * KernelFunctionDiff()[nameof(f)](q)) *
         KernelFunctionnorm()[nameof(f)][dim]
+    return influence
+end
+
+# Line-of-Sight Integrated Kernel function
+"""
+    function LOSint_Smoothed_kernel_function_dimensionless(f::Function, h::Union{Float32,Float64}, ra::Vector, rb::Vector)
+
+Calculating dimensionless part of Line-of-Sight Integrated ∫W(ra-rb,h)dqz.
+
+# Parameters
+- `f::Function`: Kernel function. 
+- `h::Union{Float32,Float64}`: Smoothed length.
+- `r::Float64`: The geometric distance bewteen ra and rb.
+- `dim:Int`: The dimension for calculating. (before integration)
+
+# Returns
+- `Float64`: ∫W(ra-rb,h)dqz
+"""
+function LOSint_Smoothed_kernel_function_dimensionless(
+    f::Function,
+    h::Union{Float32,Float64},
+    r::Float64,
+    dim::Int,
+)
+    qxy::Float64 = r / h
+    R :: Float64 = KernelFunctionValid()[nameof(f)]
+    if qxy > R
+        return 0
+    else
+        qz_min = -(sqrt(R^2 - qxy^2))
+        qz_max = sqrt(R^2 - qxy^2)
+        integrand(qz) = f(sqrt(qxy^2 + qz^2))
+        result, _ = quadgk(integrand, qz_min, qz_max)
+        influence::Float64 = result * KernelFunctionnorm()[nameof(f)][dim]
+        return influence
+    end
+end
+
+"""
+    function LOSint_Smoothed_kernel_function(f::Function, h::Union{Float32,Float64}, ra::Vector, rb::Vector)
+
+Calculating dimensionless part of Line-of-Sight Integrated ∫W(ra-rb,h)dqz.
+
+# Parameters
+- `f::Function`: Kernel function. 
+- `h::Union{Float32,Float64}`: Smoothed length.
+- `r::Float64`: The geometric distance bewteen ra and rb.
+- `dim:Int`: The dimension for calculating. (before integration)
+
+# Returns
+- `Float64`: (1/h^(dim-1))∫W(ra-rb,h)dqz
+"""
+function LOSint_Smoothed_kernel_function(
+    f::Function,
+    h::Union{Float32,Float64},
+    r::Float64,
+    dim::Int,
+)   
+    hr :: Float64 = h^(-dim+1)
+    influence :: Float64 = hr * LOSint_Smoothed_kernel_function_dimensionless(f,h,r,dim)
     return influence
 end

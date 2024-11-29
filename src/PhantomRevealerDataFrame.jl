@@ -83,6 +83,27 @@ function get_time(data::PhantomRevealerDataFrame)
 end
 
 """
+    get_code_unit(data::PhantomRevealerDataFrame)
+Get the value of converting from code unit to cgs.
+
+# Parameters
+- `data :: PhantomRevealerDataFrame`: The SPH data that is stored in `PhantomRevealerDataFrame` 
+
+#Returns
+- 'Float64': Unit of distance
+- 'Float64': Unit of mass
+- 'Float64': Unit of time
+- 'Float64': Unit of magnetic field
+"""
+function get_code_unit(data::PhantomRevealerDataFrame)
+    udist = data.params["udist"]
+    umass = data.params["umass"]
+    utime = data.params["utime"]
+    umagfd = data.params["umagfd"]
+    return udist, umass, utime, umagfd
+end
+
+"""
     add_mean_h!(data::PhantomRevealerDataFrame)
 Calculate the average smoothed radius of particles, storing into the `params` field.
 
@@ -502,13 +523,7 @@ function add_Kepelarian_azimuthal_velocity!(data::PhantomRevealerDataFrame)
     G = get_unit_G(data)
     M = data.params["Origin_sink_mass"]
     data.dfdata[!, "vϕ_k"] = sqrt.((G * M) ./ data.dfdata[!, "s"])
-    data.dfdata[!, "vϕ_sub"] = data.dfdata[!, "vϕ"] - data.dfdata[!, "vϕ_k"]
-    data.dfdata[!, "vsubnorm"] =
-        sqrt.(
-            data.dfdata[!, "vs"] .^ 2 +
-            data.dfdata[!, "vϕ_sub"] .^ 2 +
-            data.dfdata[!, "vz"] .^ 2
-        )
+    data.dfdata[!, "vϕ-vϕ_k"] = data.dfdata[!, "vϕ"] - data.dfdata[!, "vϕ_k"]
 end
 
 """

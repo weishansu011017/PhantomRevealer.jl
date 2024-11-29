@@ -14,19 +14,19 @@ function Slicing_disk(file::String)
     # General setting
     smoothed_kernel :: Function = M6_spline                              # Allowed function: M4_spline, M5_spline, M6_spline, C2_Wendland, C4_Wendland, C6_Wendland
     h_mode :: String = "closest"                                         # Allowed mode: "mean", "closest"
-    DiskMass_OuterRadius :: Float64 = 150.0                               # The outer radius of disk while estimating the mass of disk
+    DiskMass_OuterRadius :: Float64 = 150.0                              # The outer radius of disk while estimating the mass of disk
 
     # Output setting
     File_prefix :: String = "Slice"
-    HDF5 :: Bool = true                                                  # Extract the final result as HDF5 format
-    figure :: Bool = false                                               # Extract the final result as figure
+    HDF5 :: Bool = false                                                 # Extract the final result as HDF5 format
+    figure :: Bool = true                                                # Extract the final result as figure
 
     # Disk generating setting (Base on cylindrical coordinate (s,ϕ,z))
     Origin_sinks_id = 1                                                  # The id of sink which is located at the middle of disk.
     ## s
     smin :: Float64 = 10.0                                               # The minimum radius of disk.
     smax :: Float64  = 140.0                                             # The maximum radius of disk.
-    sn :: Int64 = 131                                                    # The number of separation alone the radial direction on the disk.
+    sn :: Int64 = 141                                                    # The number of separation alone the radial direction on the disk.
 
     ## ϕ
     ϕmin :: Float64  = 0.0                                               # The lower bound of angle for analysis.
@@ -36,20 +36,20 @@ function Slicing_disk(file::String)
     ## z
     zmin :: Float64  = -33.0                                             # The lower bound of height from the z = 0 plane.
     zmax :: Float64  = 33.0                                              # The upper bound of height from the z = 0 plane.
-    zn :: Int64 = 80                                                     # The number of separation alone the vertical direction on the disk.
+    zn :: Int64 = 120                                                    # The number of separation alone the vertical direction on the disk.
     
     column_names :: Vector{String} = ["vs", "vz"]                        # The column that would be interpolated
 
     # Figure setting (Valid only if figure == ture)
-    Figure_format :: String = "png"
-    figsize :: Tuple = (12,8)
+    Figure_format :: String = "eps"
+    figsize :: Tuple = (8,6)
     dpi = 450
     slabel = latexstring(L"$r$ [au]")
     zlabel = latexstring(L"$z$ [au]")
     colormap_gas :: String = "RdYlGn"
     colormap_dust :: String = "RdYlGn"
     clim_gas :: Vector = [1e-17,4e-14]
-    clim_dust :: Vector = [1e-19,1e-15]
+    clim_dust :: Vector = [1e-19,8e-14]
     streamline_density :: Float64 = 3.0
     streamline_color :: String = "black"
     # -----------------------------------------------------------------------------
@@ -61,7 +61,7 @@ function Slicing_disk(file::String)
     ϕparams :: Tuple{Float64,Float64,Int} = (ϕmin, ϕmax, ϕn)
     zparams :: Tuple{Float64,Float64,Int} = (zmin, zmax, zn)
     columns_order :: Vector = ["rho", "∇rhos", "∇rhoϕ", column_names...] # construct a ordered column names 
-    
+
     # Read file
     prdf_list :: Vector{PhantomRevealerDataFrame} = read_phantom(file,"all")
     sinks_data :: PhantomRevealerDataFrame = prdf_list[end]
@@ -84,8 +84,8 @@ function Slicing_disk(file::String)
     add_cylindrical!(datad)
 
     # Main_analysis
-    grids_dictg :: Dict{String, gridbackend} = Disk_3D_Grid_analysis(datag, sparams, ϕparams, zparams, column_names, smoothed_kernel, h_mode)
-    grids_dictd :: Dict{String, gridbackend} = Disk_3D_Grid_analysis(datad, sparams, ϕparams, zparams, column_names, smoothed_kernel, h_mode)
+    grids_dictg :: Dict{String, gridbackend} = Disk_3D_Grid_analysis(datag, sparams, ϕparams, zparams, column_names=column_names, smoothed_kernel=smoothed_kernel, h_mode=h_mode)
+    grids_dictd :: Dict{String, gridbackend} = Disk_3D_Grid_analysis(datad, sparams, ϕparams, zparams, column_names=column_names, smoothed_kernel=smoothed_kernel, h_mode=h_mode)
 
     # Packaging the grids dictionary
     final_dict = create_grids_dict(["g","d"], [grids_dictg, grids_dictd])
@@ -144,11 +144,11 @@ function Slicing_disk(file::String)
 
         # Preparing plotting backend
         fax = prplt.cart_plot(s, z, slabel, zlabel)
-        fax.__class__.anato_text_position = [0.01,0.96]
+        fax.__class__.anato_text_position = [0.01,0.97]
         fax.setup_fig(2,1,figsize)
 
         fax.pcolor_draw([rhog,rhod], colormaps, clabels,[1,1],[latexstring(L"$t = ",Int64(round(timestamp)), L"$ yr")], clims, false)
-        fax.streamplot_draw([vsg,vsd],[vzg,vzd],streamline_color, streamline_density, false)
+        # fax.streamplot_draw([vsg,vsd],[vzg,vzd],streamline_color, streamline_density, false)
         fax.set_ylabel(0)
         fax.set_ylabel(1)
         fax.set_xlabel(1)
