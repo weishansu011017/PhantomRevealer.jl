@@ -115,7 +115,12 @@ class PhantomRevealerAnalysisResult:
                 column_unit[key] = header + suffix + unit
                 if "∇" in column_name:
                     self.data_dict[key] /= udist
-                    column_unit[key] = r"$\nabla$" + replace_grident_exp(column_unit[key])
+                    if "⋅" in column_name:
+                        column_unit[key] = r"$\nabla\cdot$" + replace_grident_exp(column_unit[key])
+                    elif "×" in column_name:
+                        column_unit[key] = r"$\nabla\times$" + replace_grident_exp(column_unit[key])
+                    else:
+                        column_unit[key] = r"$\nabla$" + replace_grident_exp(column_unit[key])
                 self.params["column_units"] = column_unit.copy()
         finally:
             self.params["_cgs"] = True

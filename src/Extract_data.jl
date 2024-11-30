@@ -533,11 +533,19 @@ function transfer_cgs!(data::Analysis_result, year::Bool = true)
             column_unit[key] = latexstring(header, suffix, unit)
             if occursin("∇", column_name)
                 data.data_dict[key] /= udist
-                column_unit[key] =
-                    latexstring(L"$\nabla$", replace_grident_exp!(column_unit[key]))
+                if occursin("⋅",column_name)
+                        column_unit[key] =
+                    latexstring(L"$\nabla\cdot$", replace_grident_exp!(column_unit[key]))
+                elseif occursin("×",column_name)
+                    column_unit[key] =
+                        latexstring(L"$\nabla\times$", replace_grident_exp!(column_unit[key]))
+                else
+                    column_unit[key] =
+                        latexstring(L"$\nabla$", replace_grident_exp!(column_unit[key]))
+                end
             end
-            data.params["column_units"] = deepcopy(column_unit)
         end
+        data.params["column_units"] = deepcopy(column_unit)
     end
     data.params["_cgs"] = true
 end

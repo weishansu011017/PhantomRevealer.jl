@@ -113,12 +113,17 @@ function density(
     "cart" = cartitian
     "polar" = cylindrical
     """
+    # Return 0.0 if no particle in the data
     if nrow(data.dfdata) == 0
         return 0.0
     end
+
+    # Preparing and verifing the data
     if coordinate_flag == "polar"
         reference_point = _cylin2cart(reference_point)
     end
+
+    # Evaluating a proper smoothed radius
     truncate_multiplier = KernelFunctionValid()[nameof(smoothed_kernel)]
     rnorm = get_rnorm_ref(data, reference_point)
     if Identical_particles
@@ -128,6 +133,8 @@ function density(
         mass_array = data.dfdata[!,"m"]
     end
     h_intepolate = estimate_h_intepolate(data, rnorm, h_mode) # _easy_estimate_h_intepolate(dfdata, rnorm,)
+
+    # Kernel interpolation
     if (h_intepolate == 0.0)
         density = 0.0
     else
@@ -191,10 +198,13 @@ function gradient_density(
     "polar" = polar
     """
     grad_density::Vector = Vector{Float64}(undef, 3)
+    # Return NaN if no particle in the data
     if nrow(data.dfdata) == 0
         fill!(grad_density, NaN)
         return grad_density
     end
+
+    # Preparing and verifing the data
     if coordinate_flag == "polar"
         ϕ =  reference_point[2]
         reference_point = _cylin2cart(reference_point)
@@ -206,6 +216,7 @@ function gradient_density(
         density_value = density(data,reference_point,smoothed_kernel,h_mode,"cart",Identical_particles=Identical_particles)
     end
     
+    # Evaluating a proper smoothed radius
     truncate_multiplier = KernelFunctionValid()[nameof(smoothed_kernel)]
     rnorm, xyzref = get_r_ref(data, reference_point)
     density_array = data.dfdata[!,"rho"]
@@ -216,6 +227,8 @@ function gradient_density(
         mass_array = data.dfdata[!,"m"]
     end
     h_intepolate = estimate_h_intepolate(data, rnorm, h_mode) #_easy_estimate_h_intepolate(dfdata, rnorm, 1.0)
+
+    # Kernel interpolation
     if (h_intepolate == 0.0)
         fill!(grad_density, NaN)
         return grad_density
@@ -304,7 +317,30 @@ function quantity_intepolate(
     "cart" = cartitian
     "polar" = cylindrical
     """
+    # Constructing the column names for interpolation
     working_column_names = copy(column_names)
+    divided_column = "rho"
+    rho_flag = false
+    if divided_column in working_column_names
+        rho_flag = true
+        deleteat!(working_column_names, findall(x->x==divided_column, working_column_names))
+    else
+        rho_flag = false
+    end
+    quantity_result = Dict{String,Float64}()
+
+    # Return NaN if no particle in the data
+    if nrow(data.dfdata) == 0
+        for column_name in working_column_names
+            quantity_result[column_name] = NaN
+            if rho_flag
+                quantity_result[divided_column] = 0.0
+            end
+        end
+        return quantity_result
+    end
+
+    # Preparing and verifing the data
     if !(hasproperty(data.dfdata, "rho"))
         add_rho!(data)
     end
@@ -316,15 +352,8 @@ function quantity_intepolate(
     if coordinate_flag == "polar"
         reference_point = _cylin2cart(reference_point)
     end
-    divided_column = "rho"
-    rho_flag = false
-    if divided_column in working_column_names
-        rho_flag = true
-        deleteat!(working_column_names, findall(x->x==divided_column, working_column_names))
-    else
-        rho_flag = false
-    end
-    quantity_result = Dict{String,Float64}()
+    
+    # Evaluating a proper smoothed radius
     truncate_multiplier = KernelFunctionValid()[nameof(smoothed_kernel)]
     rnorm = get_rnorm_ref(data, reference_point)
     if Identical_particles
@@ -334,9 +363,10 @@ function quantity_intepolate(
         mass_array = data.dfdata[!,"m"]
     end
     h_intepolate = estimate_h_intepolate(data, rnorm, h_mode)
+
+    # Kernel interpolation
     dfdata = data.dfdata
-    num_particles = length(rnorm)
-    if (h_intepolate == 0.0) || (num_particles==0)
+    if (h_intepolate == 0.0)
         for column_name in working_column_names
             quantity_result[column_name] = NaN
             if rho_flag
@@ -413,6 +443,14 @@ function gradient_quantity_intepolate(
     "cart" = cartitian
     "polar" = cylindrical
     """
+    grad_quant::Vector = Vector{Float64}(undef, 3)\
+    # Return NaN if no particle in the data
+    if nrow(data.dfdata) == 0
+        fill!(grad_quant, NaN)
+        return grad_quant
+    end
+
+    # Preparing and verifing the data
     if !(hasproperty(data.dfdata, column_name))
         error("IntepolateError: No matching column '$(column_name)'.")
     end
@@ -420,6 +458,8 @@ function gradient_quantity_intepolate(
         ϕ =  reference_point[2]
         reference_point = _cylin2cart(reference_point)
     end
+
+    # Estimating necessary quantity if not provided
     if isnothing(density_value)
         density_value = density(data,reference_point,smoothed_kernel,h_mode,"cart",Identical_particles=Identical_particles)
     end
@@ -427,6 +467,7 @@ function gradient_quantity_intepolate(
         quantity_value = quantity_intepolate(data,reference_point,[column_name],smoothed_kernel,h_mode,"cart",Identical_particles=Identical_particles)[column_name]
     end
 
+    # Evaluating a proper smoothed radius
     truncate_multiplier = KernelFunctionValid()[nameof(smoothed_kernel)]
     rnorm, xyzref = get_r_ref(data, reference_point)
     quantity_array = data.dfdata[!,column_name]
@@ -437,9 +478,9 @@ function gradient_quantity_intepolate(
         mass_array = data.dfdata[!,"m"]
     end
     h_intepolate = estimate_h_intepolate(data, rnorm, h_mode) #_easy_estimate_h_intepolate(dfdata, rnorm, 1.0)
-    grad_quant::Vector = Vector{Float64}(undef, 3)
-    num_particles = length(rnorm)
-    if (h_intepolate == 0.0) || (num_particles==0)
+    
+    # Kernel interpolation
+    if (h_intepolate == 0.0)
         fill!(grad_quant, NaN)
         return grad_quant
     else
@@ -477,7 +518,7 @@ end
 Calculate the divergence value of every requested quantities at the given reference point by SPH interpolation.
 Those points whose neighborhood has no particles around it would be label as `NaN`
 
-The gradient value of any arbitrary scalar quantity A would be estimated by
+The divergence of any arbitrary vector quantity A would be estimated by
 
 ∇⋅A(r) = (1/ρ(r))∑_b m_b*(A_b-A(r))⋅∇W(r-r_b)
 
@@ -492,21 +533,12 @@ The gradient value of any arbitrary scalar quantity A would be estimated by
 # Keyword argument
 - `Identical_particles :: Bool = true`: Whether all the particles is identical in `data`. If false, particle mass would try to access the mass column i.e. data.data_dict["m"].
 - `density_value :: Union{Nothing,Float64} = nothing`: The density of fluid at reference_point. If `nothing` will calculate it automatically.
-- `quantity_value :: Union{Nothing,Float64} = nothing`: The value of quantitiy at reference_point. If `nothing` will calculate it automatically.
+- `quantity_value :: Union{Nothing,Vector{Float64}} = nothing`: The vector of quantitiy at reference_point. If `nothing` will calculate it automatically.
+- `quantity_coordinate_flag :: String = "cart"`: The coordinate system of `quantity_value`.
 
 # Returns
 - `Float64`: The divergence of quantity at the reference point.
 
-# Example
-```julia
-prdf_list = read_phantom(dumpfile_00000,"all")
-COM2star!(prdf_list, prdf_list[end],1)
-data :: PhantomRevealerDataFrame = prdf_list[1]
-column_name :: String = ["vx"]
-reference_point :: Vector = [25.0, π/2, 0.0]  # Choosing the cylindrical coordinate
-smoothed_kernel :: Function = M6_spline
-∇vx = gradient_quantity_intepolate(data, reference_point, column_name, smoothed_kernel, "closest", "polar")
-```
 """
 function divergence_quantity_intepolate(
     data::PhantomRevealerDataFrame,
@@ -526,11 +558,16 @@ function divergence_quantity_intepolate(
     "cart" = cartitian
     "polar" = cylindrical
     """
+    # Return NaN if no particle in the data
+    if nrow(data.dfdata) == 0
+        return NaN
+    end
+
+    # Constructing the column names for interpolation
     cart_column_names :: Vector{String} = ["$(column_name)x","$(column_name)y","$(column_name)z"]
     cylin_column_names :: Vector{String} = ["$(column_name)s","$(column_name)ϕ","$(column_name)z"]
     vector_column_names :: Union{Nothing,Vector{String}} = nothing
     cylin_components_flag = false
-    
     for vcolumn_name in cart_column_names
         if !(hasproperty(data.dfdata,vcolumn_name))
             if coordinate_flag == "polar"
@@ -546,25 +583,31 @@ function divergence_quantity_intepolate(
             end
         end
     end
-
     if cylin_components_flag
         vector_column_names = cylin_column_names
     else
         vector_column_names = cart_column_names
     end
 
+    # Preparing and verifing the data
     if coordinate_flag == "polar"
         ϕ =  reference_point[2]
         reference_point = _cylin2cart(reference_point)
     end
     
+    # Estimating necessary quantity if not provided
     if isnothing(density_value)
         density_value = density(data,reference_point,smoothed_kernel,h_mode,"cart",Identical_particles=Identical_particles)
     end
     if isnothing(quantity_value)
-        quantity_value_vector = zeros(Float64,3)
+        temp_quantity_value_vector = zeros(Float64,3)
         for (i,vcolumn_name) in enumerate(vector_column_names)
-            quantity_value_vector[i] = quantity_intepolate(data,reference_point,[vcolumn_name],smoothed_kernel,h_mode,"cart",Identical_particles=Identical_particles)[vcolumn_name]
+            temp_quantity_value_vector[i] = quantity_intepolate(data,reference_point,[vcolumn_name],smoothed_kernel,h_mode,"cart",Identical_particles=Identical_particles)[vcolumn_name]
+        end
+        if cylin_components_flag
+            quantity_value_vector = _vector_cylin2cart(temp_quantity_value_vector)
+        else
+            quantity_value_vector = temp_quantity_value_vector
         end
     else
         if quantity_coordinate_flag == "polar"
@@ -574,6 +617,7 @@ function divergence_quantity_intepolate(
         end
     end
 
+    # Evaluating a proper smoothed radius
     truncate_multiplier = KernelFunctionValid()[nameof(smoothed_kernel)]
     rnorm, xyzref = get_r_ref(data, reference_point)
     quantity_array = zeros(Float64,length(rnorm),3)
@@ -587,8 +631,9 @@ function divergence_quantity_intepolate(
         mass_array = data.dfdata[!,"m"]
     end
     h_intepolate = estimate_h_intepolate(data, rnorm, h_mode) #_easy_estimate_h_intepolate(dfdata, rnorm, 1.0)
-    num_particles = length(rnorm)
-    if (h_intepolate == 0.0) || (num_particles==0)
+
+    # Kernel interpolation
+    if (h_intepolate == 0.0)
         return NaN
     else
         truncate_radius = truncate_multiplier * h_intepolate
@@ -605,7 +650,7 @@ function divergence_quantity_intepolate(
                 xyz_filtered[i, :],
             ))
         end
-        buffer_array .*= (filtered_m[i]./density)
+        buffer_array .*= (filtered_m./density_value)
         diver_quant = sum(buffer_array)
         return diver_quant
     end
@@ -616,7 +661,7 @@ end
 Calculate the curl value of every requested quantities at the given reference point by SPH interpolation.
 Those points whose neighborhood has no particles around it would be label as `NaN`
 
-The gradient value of any arbitrary scalar quantity A would be estimated by
+The curl of any arbitrary vector quantity A would be estimated by
 
 ∇×A(r) = (1/ρ(r))∑_b m_b*(A_b-A(r))×∇W(r-r_b)
 
@@ -631,21 +676,12 @@ The gradient value of any arbitrary scalar quantity A would be estimated by
 # Keyword argument
 - `Identical_particles :: Bool = true`: Whether all the particles is identical in `data`. If false, particle mass would try to access the mass column i.e. data.data_dict["m"].
 - `density_value :: Union{Nothing,Float64} = nothing`: The density of fluid at reference_point. If `nothing` will calculate it automatically.
-- `quantity_value :: Union{Nothing,Float64} = nothing`: The value of quantitiy at reference_point. If `nothing` will calculate it automatically.
+- `quantity_value :: Union{Nothing,Vector{Float64}} = nothing`: The vector of quantitiy at reference_point. If `nothing` will calculate it automatically.
+- `quantity_coordinate_flag :: String = "cart"`: The coordinate system of `quantity_value`.
 
 # Returns
 - `Vector{Float64}`: The curl of quantity at the reference point.
 
-# Example
-```julia
-prdf_list = read_phantom(dumpfile_00000,"all")
-COM2star!(prdf_list, prdf_list[end],1)
-data :: PhantomRevealerDataFrame = prdf_list[1]
-column_name :: String = ["vx"]
-reference_point :: Vector = [25.0, π/2, 0.0]  # Choosing the cylindrical coordinate
-smoothed_kernel :: Function = M6_spline
-∇vx = gradient_quantity_intepolate(data, reference_point, column_name, smoothed_kernel, "closest", "polar")
-```
 """
 function curl_quantity_intepolate(
     data::PhantomRevealerDataFrame,
@@ -665,11 +701,18 @@ function curl_quantity_intepolate(
     "cart" = cartitian
     "polar" = cylindrical
     """
+    curl_quant::Vector = Vector{Float64}(undef, 3)
+    # Return NaN if no particle in the data
+    if nrow(data.dfdata) == 0
+        fill!(curl_quant, NaN)
+        return curl_quant
+    end
+
+    # Constructing the column names for interpolation
     cart_column_names :: Vector{String} = ["$(column_name)x","$(column_name)y","$(column_name)z"]
     cylin_column_names :: Vector{String} = ["$(column_name)s","$(column_name)ϕ","$(column_name)z"]
     vector_column_names :: Union{Nothing,Vector{String}} = nothing
     cylin_components_flag = false
-    
     for vcolumn_name in cart_column_names
         if !(hasproperty(data.dfdata,vcolumn_name))
             if coordinate_flag == "polar"
@@ -685,25 +728,31 @@ function curl_quantity_intepolate(
             end
         end
     end
-
     if cylin_components_flag
         vector_column_names = cylin_column_names
     else
         vector_column_names = cart_column_names
     end
 
+    # Preparing and verifing the data
     if coordinate_flag == "polar"
         ϕ =  reference_point[2]
         reference_point = _cylin2cart(reference_point)
     end
     
+    # Estimating necessary quantity if not provided
     if isnothing(density_value)
         density_value = density(data,reference_point,smoothed_kernel,h_mode,"cart",Identical_particles=Identical_particles)
     end
     if isnothing(quantity_value)
-        quantity_value_vector = zeros(Float64,3)
+        temp_quantity_value_vector = zeros(Float64,3)
         for (i,vcolumn_name) in enumerate(vector_column_names)
-            quantity_value_vector[i] = quantity_intepolate(data,reference_point,[vcolumn_name],smoothed_kernel,h_mode,"cart",Identical_particles=Identical_particles)[vcolumn_name]
+            temp_quantity_value_vector[i] = quantity_intepolate(data,reference_point,[vcolumn_name],smoothed_kernel,h_mode,"cart",Identical_particles=Identical_particles)[vcolumn_name]
+        end
+        if cylin_components_flag
+            quantity_value_vector = _vector_cylin2cart(temp_quantity_value_vector)
+        else
+            quantity_value_vector = temp_quantity_value_vector
         end
     else
         if quantity_coordinate_flag == "polar"
@@ -713,6 +762,7 @@ function curl_quantity_intepolate(
         end
     end
 
+    # Evaluating a proper smoothed radius
     truncate_multiplier = KernelFunctionValid()[nameof(smoothed_kernel)]
     rnorm, xyzref = get_r_ref(data, reference_point)
     quantity_array = zeros(Float64,length(rnorm),3)
@@ -726,9 +776,9 @@ function curl_quantity_intepolate(
         mass_array = data.dfdata[!,"m"]
     end
     h_intepolate = estimate_h_intepolate(data, rnorm, h_mode) #_easy_estimate_h_intepolate(dfdata, rnorm, 1.0)
-    curl_quant::Vector = Vector{Float64}(undef, 3)
-    num_particles = length(rnorm)
-    if (h_intepolate == 0.0) || (num_particles==0)
+    
+    # Kernel intepolation
+    if (h_intepolate == 0.0)
         fill!(curl_quant, NaN)
         return curl_quant
     else
@@ -804,12 +854,17 @@ function surface_density(
     "cart" = cartitian
     "polar" = polar
     """
+    # Return 0.0 if no particle in the data
     if nrow(data.dfdata) == 0
         return 0.0
     end
+
+    # Preparing and verifing the data
     if coordinate_flag == "polar"
         reference_point = _cylin2cart(reference_point)
     end
+
+    # Evaluating a proper smoothed radius
     truncate_multiplier = KernelFunctionValid()[nameof(smoothed_kernel)]
     snorm = get_snorm_ref(data, reference_point)
     if Identical_particles
@@ -819,7 +874,8 @@ function surface_density(
         mass_array = data.dfdata[!,"m"]
     end
     h_intepolate = estimate_h_intepolate(data, snorm, h_mode) #_easy_estimate_h_intepolate(dfdata, rnorm, 1.0)
-    num_particles = length(snorm)
+
+    # Kernel interpolation
     if (h_intepolate == 0.0)
         surface_density = 0.0
     else
@@ -877,15 +933,20 @@ function gradient_surface_density(
     "cart" = cartitian
     "polar" = polar
     """
+    # Return NaN if no particle in the data
     grad_surface_density::Vector = Vector{Float64}(undef, 2)
     if nrow(data.dfdata) == 0
         fill!(grad_surface_density, NaN)
         return grad_surface_density
     end
+
+    # Preparing and verifing the data
     if coordinate_flag == "polar"
         ϕ =  reference_point[2]
         reference_point = _cylin2cart(reference_point)
     end
+
+    # Evaluating a proper smoothed radius
     truncate_multiplier = KernelFunctionValid()[nameof(smoothed_kernel)]
     snorm, xyref = get_s_ref(data, reference_point)
     if Identical_particles
@@ -895,6 +956,8 @@ function gradient_surface_density(
         mass_array = data.dfdata[!,"m"]
     end
     h_intepolate = estimate_h_intepolate(data, snorm, h_mode) #_easy_estimate_h_intepolate(dfdata, rnorm, 1.0)
+
+    # Kernel interpolation
     if (h_intepolate == 0.0)
         fill!(grad_surface_density, NaN)
         return grad_surface_density
@@ -972,19 +1035,29 @@ function quantity_intepolate_2D(
     "cart" = cartitian
     "polar" = polar
     """
+    # Constructing the column names for interpolation
     working_column_names = copy(column_names)
+    quantity_result = Dict{String,Float64}()
+
+    # Return NaN if no particle in the data
+    if nrow(data.dfdata) == 0
+        for column_name in working_column_names
+            quantity_result[column_name] = NaN
+        end
+        return quantity_result
+    end
+    
+    # Preparing and verifing the data
     for column_name in column_names
         if !(hasproperty(data.dfdata, column_name))
             error("IntepolateError: No matching column '$(column_name)'.")
         end
     end
-
     if coordinate_flag == "polar"
         reference_point = _cylin2cart(reference_point)
     end
 
-
-    quantity_result = Dict{String,Float64}()
+    # Evaluating a proper smoothed radius
     truncate_multiplier = KernelFunctionValid()[nameof(smoothed_kernel)]
     snorm = get_snorm_ref(data, reference_point)
     if Identical_particles
@@ -994,9 +1067,10 @@ function quantity_intepolate_2D(
         mass_array = data.dfdata[!,"m"]
     end
     h_intepolate = estimate_h_intepolate(data, snorm, h_mode)
+
+    # Kernel interpolation
     dfdata = data.dfdata
-    num_particles = length(snorm)
-    if (h_intepolate == 0.0) || (num_particles==0)
+    if (h_intepolate == 0.0)
         for column_name in working_column_names
             quantity_result[column_name] = NaN
         end

@@ -110,6 +110,20 @@ function Disk_3D_Grid_analysis(
             quantity_value=quantity_value
         )
     end
+    function wrap_diverquant(data::PhantomRevealerDataFrame, point::Array, column_name::String,density_value::Union{Nothing,Float64}=nothing, quantity_value::Union{Nothing,Float64} = nothing)
+        return divergence_quantity_intepolate(
+            data,
+            point,
+            column_name,
+            smoothed_kernel,
+            h_mode,
+            "polar",
+            Identical_particles=Identical_particles,
+            density_value=density_value,
+            quantity_value=quantity_value,
+            quantity_coordinate_flag="polar"
+        )
+    end
     function wrap_curlquant(data::PhantomRevealerDataFrame, point::Array, column_name::String,density_value::Union{Nothing,Float64}=nothing, quantity_value::Union{Nothing,Float64} = nothing)
         return curl_quantity_intepolate(
             data,
@@ -120,50 +134,50 @@ function Disk_3D_Grid_analysis(
             "polar",
             Identical_particles=Identical_particles,
             density_value=density_value,
-            quantity_value=quantity_value
+            quantity_value=quantity_value,
+            quantity_coordinate_flag="polar"
         )
     end
     @info "Start 3D disk grid analysis."
     # Add necessary quantities
     add_necessary_quantity!(data)
     
+    # The column subfix in cylindrical coordinate system
+    column_suffixes = ["s", "ϕ", "z"]
+
     # Checking data before interpolation
     ###############################
     # Checking the necessity of intepolation
     # Regular intepolation
     columnNotEmpty = true
-    if isnothing(column_names)
-        columnNotEmpty = false
-    elseif isempty(column_names)
+    if isnothing(column_names) || isempty(column_names)
         columnNotEmpty = false
     end
+
     # Gradient intepolation
     gradcolumnNotEmpty = true
-    if isnothing(gradient_column_names)
-        gradcolumnNotEmpty = false
-    elseif isempty(column_names)
+    if isnothing(gradient_column_names) || isempty(gradient_column_names)
         gradcolumnNotEmpty = false
     end
+
     # Divergence intepolation
     divercolumnNotEmpty = true
-    if isnothing(divergence_column_names)
-        divercolumnNotEmpty = false
-    elseif isempty(column_names)
+    if isnothing(divergence_column_names) || isempty(divergence_column_names)
         divercolumnNotEmpty = false
     end
+
     # Curl intepolation
     curlcolumnNotEmpty = true
-    if isnothing(curl_column_names)
-        curlcolumnNotEmpty = false
-    elseif isempty(column_names)
+    if isnothing(curl_column_names) || isempty(curl_column_names)
         curlcolumnNotEmpty = false
     end
+
     ###############################
     if (data.params["Origin_sink_id"] == -1)
         error("IntepolateError: Wrong origin located!")
     end
 
-    # Check missing columns. Also checking if the regular intepolation also intepolate the same column in the first deriviative intepolation to reduce calculation.
+    # Check missing columns. Also checking if the regular intepolation also intepolate the same column in the first deriviative intepolation to reduce the error of estimation.
     if columnNotEmpty
         for column_name in column_names
             if !(hasproperty(data.dfdata, column_name))
@@ -188,21 +202,41 @@ function Disk_3D_Grid_analysis(
         end
     end
 
-    # if curlcolumnNotEmpty
-    #     curl_value_exist :: Vector{Bool} = Vector{Bool}(undef,length(curl_column_names))
-    #     for column_name in curl_column_names
-    #         if !(hasproperty(data.dfdata, column_name))
-    #             error("IntepolateError: Missing column name $column_name !")
-    #         end
-    #     end
-    #     for (i,gradcolumn) in enumerate(gradient_column_names)
-    #         if gradcolumn in column_names
-    #             grad_value_exist[i] = true
-    #         else
-    #             grad_value_exist[i] = false
-    #         end
-    #     end
-    # end
+    if divercolumnNotEmpty
+        diver_value_exist :: Vector{Bool} = Vector{Vector{Bool}}(undef,length(divergence_column_names))
+        for (i,rawdivercolumn) in enumerate(divergence_column_names)
+            for suffix in column_suffixes
+                divercolumn = rawdivercolumn * suffix
+                if !(hasproperty(data.dfdata, divercolumn))
+                    error("IntepolateError: Missing column name $divercolumn !")
+                end
+                if divercolumn in column_names
+                    diver_value_exist[i] = true
+                else
+                    diver_value_exist[i] = false
+                    break
+                end
+            end
+        end
+    end
+
+    if curlcolumnNotEmpty
+        curl_value_exist :: Vector{Bool} = Vector{Bool}(undef,length(curl_column_names))
+        for (i,rawcurlcolumn) in enumerate(curl_column_names)
+            for suffix in column_suffixes
+                curlcolumn = rawcurlcolumn * suffix
+                if !(hasproperty(data.dfdata, curlcolumn))
+                    error("IntepolateError: Missing column name $curlcolumn !")
+                end
+                if curlcolumn in column_names
+                    curl_value_exist[i] = true
+                else
+                    curl_value_exist[i] = false
+                    break
+                end
+            end
+        end
+    end
 
     # Generate kd tree in 3D space
     kdtree3d = Generate_KDtree(data, 3)
@@ -293,15 +327,40 @@ function Disk_3D_Grid_analysis(
                 error("IntepolateError: Missing column name!")
             end
         end
+        if divercolumnNotEmpty
+            input_density = Result_dict["rho"].grid[i]
+            diver_quantity_interpolation_dict::Dict{String,Float64} = Dict{String,Float64}()
+            for n in eachindex(divergence_column_names)
+                column_name = divergence_column_names[n]
+                input_value = nothing
+                if diver_value_exist[n]
+                    input_value = zeros(Float64,3)
+                    input_value[1] = Result_dict["$(column_name)s"].grid[i]
+                    input_value[2] = Result_dict["$(column_name)ϕ"].grid[i]
+                    input_value[3] = Result_dict["$(column_name)z"].grid[i]
+                end
+                diver_quantity_interpolation_dict["∇⋅$(column_name)"] = wrap_diverquant(kdtf_data, target,column_name,input_density,input_value)
+            end
+            if all(key -> haskey(Result_dict, key), keys(diver_quantity_interpolation_dict))
+                for key in keys(diver_quantity_interpolation_dict)
+                    Result_dict[key].grid[i] = diver_quantity_interpolation_dict[key]
+                end
+            else
+                error("IntepolateError: Missing column name!")
+            end
+        end  
         if curlcolumnNotEmpty
             input_density = Result_dict["rho"].grid[i]
             curl_quantity_interpolation_dict::Dict{String,Float64} = Dict{String,Float64}()
             for n in eachindex(curl_column_names)
                 column_name = curl_column_names[n]
                 input_value = nothing
-                # if curl_value_exist[n]
-                #     input_value = Result_dict[column_name].grid[i]
-                # end
+                if curl_value_exist[n]
+                    input_value = zeros(Float64,3)
+                    input_value[1] = Result_dict["$(column_name)s"].grid[i]
+                    input_value[2] = Result_dict["$(column_name)ϕ"].grid[i]
+                    input_value[3] = Result_dict["$(column_name)z"].grid[i]
+                end
                 buffer_array = wrap_curlquant(kdtf_data, target,column_name,input_density,input_value)
                 curl_quantity_interpolation_dict["∇×$(column_name)s"],curl_quantity_interpolation_dict["∇×$(column_name)ϕ"],curl_quantity_interpolation_dict["∇×$(column_name)z"] = buffer_array
             end
@@ -313,7 +372,6 @@ function Disk_3D_Grid_analysis(
                 error("IntepolateError: Missing column name!")
             end
         end  
-
     end
 
     @info "End 3D disk grid analysis."
