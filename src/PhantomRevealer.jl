@@ -40,6 +40,9 @@ Initialize the built-in pyplot backend.
 """
 function initialize_pyplot_backend()
     push!(pyimport("sys")."path", dirname(pathof(PhantomRevealer)))
+    os = pyimport("os")
+    os.environ["OMP_NUM_THREADS"] = "1"
+    os.environ["MKL_NUM_THREADS"] = "1"
     prplt = pyimport("pyplot_backend")
     return prplt
 end

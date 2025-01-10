@@ -100,9 +100,14 @@ class PhantomRevealerAnalysisResult:
                     unit = r"$ [cm s$^{-1}$]"
                 elif ("vphi" in column_name) or ("vϕ" in column_name):
                     self.data_dict[key] *= uv
-                    header = r"$v_{\phi,"
-                    suffix = suffix + r"}"
-                    unit = r"$ [cm s$^{-1}$]"
+                    if ("vphi_k" in column_name) or ("vϕ_k" in column_name):
+                        header = r"$v_{\phi,"
+                        suffix = suffix + r"-k}"
+                        unit = r"$ [cm s$^{-1}$]"
+                    else:
+                        header = r"$v_{\phi,"
+                        suffix = suffix + r"}"
+                        unit = r"$ [cm s$^{-1}$]"
                 elif "vz" in column_name:
                     self.data_dict[key] *= uv
                     header = r"$v_{z,"
@@ -225,7 +230,7 @@ class PhantomRevealerAnalysisResult:
         self.add_more_label(column_index,r"St")
         self.data_dict[column_index] = St
         
-    def add_vsub(self, column_index = 63):
+    def add_vsub(self, column_index = 63, use_subkep_vphi=True):
         for column in self.column_names.values():
             if "vsub" in column:
                 return
@@ -236,15 +241,23 @@ class PhantomRevealerAnalysisResult:
         vϕd = None
         vzg = None
         vzd = None
+        
+        if use_subkep_vphi:
+            vphi_name1 = "vϕ-vϕ_k"
+            vphi_name2 = "vϕ-vϕ_km"
+        else:
+            vphi_name1 = "vϕ"
+            vphi_name2 = "vϕm"
+        
         for key in self.column_names.keys():
             column = self.column_names[key]
             if ("vs_g" in column) or ("vsm_g" in column):
                 vsg = self.data_dict[key]
             elif ("vs_d" in column) or ("vsm_d" in column):
                 vsd = self.data_dict[key]
-            elif ("vϕ_g" in column) or ("vϕm_g" in column):
+            elif (vphi_name1+"_g" in column) or (vphi_name2+"_g" in column):
                 vϕg = self.data_dict[key]
-            elif ("vϕ_d" in column) or ("vϕm_d" in column):
+            elif (vphi_name1+"_d" in column) or (vphi_name2+"_d" in column):
                 vϕd = self.data_dict[key]
             elif ("vz_g" in column) or ("vzm_g" in column):
                 vzg = self.data_dict[key]

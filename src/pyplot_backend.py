@@ -452,11 +452,12 @@ class two_axes_plot(figure_ax):
         Norms = np.empty(self.nrows, dtype=object)
         for j in range(len(Log_flags)):
             vmin, vmax = vlims[j]
-            if vmin < 0 and vmax > 0: 
-                linthresh = min(abs(vmin), abs(vmax)) * 0.1
-                Norms[j] = mcolors.SymLogNorm(linthresh=linthresh, vmin=vmin, vmax=vmax)
-            elif Log_flags[j]: 
-                Norms[j] = mcolors.LogNorm(vmin=vmin, vmax=vmax)
+            if Log_flags[j]:
+                if vmin < 0 and vmax > 0: 
+                    linthresh = min(abs(vmin), abs(vmax)) * 0.1
+                    Norms[j] = mcolors.SymLogNorm(linthresh=linthresh, vmin=vmin, vmax=vmax)
+                else:
+                    Norms[j] = mcolors.LogNorm(vmin=vmin, vmax=vmax)
             else: 
                 Norms[j] = mcolors.Normalize(vmin=vmin, vmax=vmax)
         

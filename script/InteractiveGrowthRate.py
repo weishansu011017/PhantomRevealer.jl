@@ -129,9 +129,9 @@ def core(file:str,Polar_index:int) -> LcartRpolar_plot:
     rhog_index = 10
     rhod_index = 11
     vx_index = 12
-    vy_index = 14
+    vy_index = 18
     omegax_index = 13
-    omegay_index = 15
+    omegay_index = 19
     
     # Manual setup some parameters
     msetup = {}

@@ -42,6 +42,23 @@ mutable struct Analysis_result <: PhantomRevealerDataStructures
     params::Dict{String,Any}
 end
 
+# Extending index operation
+@inline function Base.getindex(data::Analysis_result, idx::Int, subidx...)
+    if haskey(data.data_dict, idx)
+        return data.data_dict[idx][subidx...]
+    else
+        throw(KeyError("Key $idx not found in data_dict"))
+    end
+end
+
+@inline function Base.setindex!(data::Analysis_result, value, idx::Int, subidx...)
+    if haskey(data.data_dict, idx)
+        data.data_dict[idx][subidx...] = value
+    else
+        throw(KeyError("Key $idx not found in data_dict"))
+    end
+end
+
 """
     extract_number(str::String)
 Extract the last group of numbers in a string, or the last group between the last underscore (`_`) and the file extension if present.

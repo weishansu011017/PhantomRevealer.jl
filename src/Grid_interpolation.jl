@@ -110,7 +110,7 @@ function Disk_3D_Grid_analysis(
             quantity_value=quantity_value
         )
     end
-    function wrap_diverquant(data::PhantomRevealerDataFrame, point::Array, column_name::String,density_value::Union{Nothing,Float64}=nothing, quantity_value::Union{Nothing,Float64} = nothing)
+    function wrap_diverquant(data::PhantomRevealerDataFrame, point::Array, column_name::String,density_value::Union{Nothing,Float64}=nothing, quantity_value::Union{Nothing,Vector{Float64}} = nothing)
         return divergence_quantity_intepolate(
             data,
             point,
@@ -124,7 +124,7 @@ function Disk_3D_Grid_analysis(
             quantity_coordinate_flag="polar"
         )
     end
-    function wrap_curlquant(data::PhantomRevealerDataFrame, point::Array, column_name::String,density_value::Union{Nothing,Float64}=nothing, quantity_value::Union{Nothing,Float64} = nothing)
+    function wrap_curlquant(data::PhantomRevealerDataFrame, point::Array, column_name::String,density_value::Union{Nothing,Float64}=nothing, quantity_value::Union{Nothing,Vector{Float64}} = nothing)
         return curl_quantity_intepolate(
             data,
             point,

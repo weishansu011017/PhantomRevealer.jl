@@ -29,9 +29,72 @@ struct PhantomRevealerDataFrame <: PhantomRevealerDataStructures
     params::Dict
 end
 
+# Extending index operation
+# Single row and single column indexing
+@inline function Base.getindex(prdf::PhantomRevealerDataFrame, row_ind::Integer, col_ind::Union{Symbol, String, Int})
+    return prdf.dfdata[row_ind, col_ind]
+end
+
+# Multiple rows and single column indexing
+@inline function Base.getindex(prdf::PhantomRevealerDataFrame, row_inds::AbstractVector, col_ind::Union{Symbol, String, Int})
+    return prdf.dfdata[row_inds, col_ind]
+end
+
+# All rows and a single column indexing
+@inline function Base.getindex(prdf::PhantomRevealerDataFrame, ::Colon, col_ind::Union{Symbol, String, Int})
+    return prdf.dfdata[:, col_ind]
+end
+
+# Direct reference to a single column
+@inline function Base.getindex(prdf::PhantomRevealerDataFrame, ::typeof(!), col_ind::Union{Symbol, String, Int})
+    return prdf.dfdata[!, col_ind]
+end
+
+# Multiple rows and multiple columns indexing
+@inline function Base.getindex(prdf::PhantomRevealerDataFrame, row_inds::AbstractVector, col_inds::Union{Vector{Symbol}, Vector{String}, Vector{Int}})
+    return prdf.dfdata[row_inds, col_inds]
+end
+
+# Boolean vector indexing for rows and multiple columns
+@inline function Base.getindex(prdf::PhantomRevealerDataFrame, bool_mask::AbstractVector{Bool}, col_inds::Union{Vector{Symbol}, Vector{String}, Vector{Int}})
+    return prdf.dfdata[bool_mask, col_inds]
+end
+
+# All rows and multiple columns indexing
+@inline function Base.getindex(prdf::PhantomRevealerDataFrame, ::Colon, col_inds::Union{Vector{Symbol}, Vector{String}, Vector{Int}})
+    return prdf.dfdata[:, col_inds]
+end
+
+# Single row and multiple columns assignment
+@inline function Base.setindex!(prdf::PhantomRevealerDataFrame, value, row_ind::Integer, col_inds::Union{Vector{Symbol}, Vector{String}, Vector{Int}})
+    prdf.dfdata[row_ind, col_inds] = value
+end
+
+# Multiple rows and multiple columns assignment
+@inline function Base.setindex!(prdf::PhantomRevealerDataFrame, value, row_inds::AbstractVector, col_inds::Union{Vector{Symbol}, Vector{String}, Vector{Int}})
+    prdf.dfdata[row_inds, col_inds] = value
+end
+
+# Extend `setindex!` to support `!` with column names for PhantomRevealerDataFrame
+@inline function Base.setindex!(prdf::PhantomRevealerDataFrame, v::AbstractVector, ::typeof(!), col_ind::Union{Symbol, String})
+    # Check if the length of `v` matches the number of rows in the DataFrame
+    if nrow(prdf.dfdata) != length(v)
+        throw(ArgumentError("New column must have the same length as the number of rows in the DataFrame."))
+    end
+
+    # Handle the assignment to an existing or new column
+    if hasproperty(prdf.dfdata, Symbol(col_ind))
+        prdf.dfdata[!, col_ind] = v  # Update existing column
+    else
+        prdf.dfdata[!, col_ind] = v  # Add new column
+    end
+
+    return prdf
+end
+
 #Method
 """
-    function print_params(data::PhantomRevealerDataFrame, pause::Bool=false)
+    print_params(data::PhantomRevealerDataFrame, pause::Bool=false)
 Print out the `params` dictionary.
 
 # Parameters
@@ -95,7 +158,7 @@ Get the value of converting from code unit to cgs.
 - 'Float64': Unit of time
 - 'Float64': Unit of magnetic field
 """
-function get_code_unit(data::PhantomRevealerDataFrame)
+function get_code_unit(data::PhantomRevealerDataStructures)
     udist = data.params["udist"]
     umass = data.params["umass"]
     utime = data.params["utime"]

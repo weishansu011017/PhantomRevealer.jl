@@ -858,7 +858,6 @@ function surface_density(
     if nrow(data.dfdata) == 0
         return 0.0
     end
-
     # Preparing and verifing the data
     if coordinate_flag == "polar"
         reference_point = _cylin2cart(reference_point)
@@ -1040,7 +1039,7 @@ function quantity_intepolate_2D(
     quantity_result = Dict{String,Float64}()
 
     # Return NaN if no particle in the data
-    if nrow(data.dfdata) == 0
+    if nrow(data.dfdata) == 0 && Sigmai == 0.0
         for column_name in working_column_names
             quantity_result[column_name] = NaN
         end
